@@ -2,12 +2,12 @@
 from .analytical import get_analytical_spectral_line
 from .numerical import numerical_spectral_line
 from .geometry import create_spherical_grid, set_up_oblique_auroral_ring, rotate_around_arb_axis
-
+from .geometry_spot import get_two_spots
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-THETA, PHI = create_spherical_grid(int(1e3))
+THETA, PHI = create_spherical_grid(int(900))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -24,8 +24,6 @@ class AuroralRing:
         The width of the ring in rad.
     Rstar : float
         The radius of the star in solar radii.
-    P_rot : float
-        The rotation period of the star in days.
     phi : array
         The phase angles of the ring in rad. From 0 to 2 pi of size N.
     omega : float
@@ -41,9 +39,9 @@ class AuroralRing:
     """
 
     # init function takes the parameters of the ring and sets up the phi array
-    def __init__(self, i_rot, i_mag, latitude, width, Rstar, P_rot, 
-                 N=1000, gridsize=int(1e4), v_bins=None,
-                 v_mids=None, phi=None, omega=None, convert_to_kms=None, vmax=None,):
+    def __init__(self, i_rot, v_bins, v_mids, phi, omega, vmax, 
+                 i_mag=None, latitude=None, width=None, longitude=None,
+                 latitude2 = None, longitude2 = None, width2 = None):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -56,10 +54,7 @@ class AuroralRing:
             The mid-latitude of the ring in rad.
         width : float
             The width of the ring in rad.
-        Rstar : float
-            The radius of the star in solar radii.
-        P_rot : float
-            The rotation period of the star in days.
+
         N : int 
             The number of phase angles to use for the ring.
             The same is used for the velocity bins.
@@ -78,53 +73,32 @@ class AuroralRing:
             The conversion factor to convert from stellar radii / s to km / s.
         """
         self.i_rot = i_rot
-        self.i_mag = i_mag
-        self.latitude = latitude
-        self.Rstar = Rstar
 
-
-
-        # if omega is None:
-        #     self.P_rot = P_rot
-        #     self.omega = 2 * np.pi / self.P_rot
-        # else:   
         self.omega = omega
-
-        self.vmax = vmax #self.omega * self.Rstar * 695700. / 86400. # km/s
-
-        # if convert_to_kms is None:
-        #     self.convert_to_kms = self.Rstar * 695700. / 86400.
-        # else:
-        #     self.convert_to_kms = convert_to_kms
-
-        # set up the phi array
-        # if phi is None:
-        #     self.phi = np.linspace(0, 2*np.pi, N*30)
-        # else:
+        self.vmax = vmax 
         self.phi = phi
-
-        # set up velocity bins based on the highest possible velocity
-        # if v_bins is None:
-        #     # calculate omega
-        
-        #     self.v_bins = np.linspace(-self.vmax*1.02, self.vmax*1.02, N)
-        # else:
         self.v_bins = v_bins
+        self.v_mids = v_mids
+
 
 
         # calculate max and min latitude of the ring using width
-        if gridsize > 0:
-            self.width = width
-            self.lat_min = latitude - width/2
-            self.lat_max = latitude + width/2
-            self.THETA, self.PHI = THETA, PHI
-            
+        self.i_mag = i_mag
+        self.latitude = latitude
+        self.longitude = longitude  
+        self.width = width
+        self.lat_min = latitude - width/2
+        self.lat_max = latitude + width/2
 
-        # define binmids for the velocity bins
-        # if v_mids is None:
-        #     self.v_mids = (self.v_bins[1:] + self.v_bins[:-1]) / 2
-        # else:
-        self.v_mids = v_mids
+        self.latitude2 = latitude2
+        self.longitude2 = longitude2
+        self.width2 = width2
+
+
+
+        self.THETA, self.PHI = THETA, PHI
+        
+
 
 
     # define a method to get the flux of the ring
@@ -148,7 +122,7 @@ class AuroralRing:
                                             normalize=normalize)
     
     # define a method to get the flux of the ring numerically
-    def get_flux_numerically(self, alpha, normalize=True, foreshortening=False):
+    def get_flux_numerically(self, alpha, amp, offset, normalize=True, foreshortening=False):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
@@ -166,14 +140,52 @@ class AuroralRing:
             The flux of the ring at the given rotational phase.
         """
         # get the x, y, z positions of the ring
-        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag = set_up_oblique_auroral_ring(self.THETA, self.PHI, 
+        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = set_up_oblique_auroral_ring(self.THETA, self.PHI, 
                                                                             self.lat_max, self.lat_min, 
-                                                                            self.i_rot, self.i_mag)
+                                                                            self.i_rot, self.i_mag, amp, offset)
         
         # calculate the flux
-        return numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
-                                       self.omega, self.Rstar, self.v_bins, normalize=normalize,
+        flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
+                                       self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
+        
+        # self.amplitude = weights
+        self.q = q
+        return flux
+    
+    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False):
+        """Calculate the flux of the ring at a given rotational phase.
+
+        Parameters
+        ----------
+        alpha : float
+            The rotational phase of the star in rad.
+        normalize : bool
+            Whether to normalize the flux.
+        foreshortening : bool
+            Whether to include geometric (Lambertian) foreshortening in the calculation.
+
+        Returns
+        -------
+        flux : array
+            The flux of the ring at the given rotational phase.
+        """
+        # get the x, y, z positions of the ring
+        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_two_spots(self.THETA, self.PHI, 
+                                                                            self.latitude, self.longitude, self.width,
+                                                                            self.latitude2, self.longitude2, self.width2, 
+                                                                            self.i_rot)
+       
+        # calculate the flux
+        flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
+                                       self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
+                                       foreshortening=foreshortening)
+        
+        # self.amplitude = weights
+        self.q = q
+        return flux
+    
+
     
 
     def get_phase_integrated_numerical_line(self, alpha):
@@ -209,7 +221,7 @@ class AuroralRing:
 
         ax.scatter(np.sin(self.THETA)*np.cos(self.PHI),
               np.sin(self.THETA)*np.sin(self.PHI),
-              np.cos(self.THETA), c=c_sphere, alpha=sphere_alpha)
+              np.cos(self.THETA), c="#00204C", alpha=sphere_alpha)
 
         # plot the x axis as a dashed line
         ax.plot([-1, 1], [0, 0], [0, 0], c='k', ls='--')
@@ -222,9 +234,11 @@ class AuroralRing:
         ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c_irot)
 
         # THE RING ----------
+        
 
         # plot the rotated blue points
-        ax.scatter(xr, yr, zr, alpha=ring_alpha, c=c_ring)
+        ax.scatter(self.x, self.y, self.z, 
+                   cmap="cividis", c=self.amplitude, norm="linear", alpha=ring_alpha)
 
 
         # plot z_rot_mag
