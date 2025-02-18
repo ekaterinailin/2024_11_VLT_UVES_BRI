@@ -65,6 +65,6 @@ def get_two_spots(THETA, PHI, lat1, lon1, r1, lat2, lon2, r2, inc):
     # amplitude uniform for now
     amplitude = np.ones_like(x)
 
-    # 
+    # return z_rot twice for compatibility 
     return (x, y, z), z_rot, z_rot, amplitude
 
