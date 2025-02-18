@@ -1,8 +1,11 @@
 import numpy as np
 
+import matplotlib.pyplot as plt
+
+
 
 def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
-                                i_rot, i_mag):
+                                i_rot, i_mag, amp, offset):
      """Set up an oblique auroral ring around the magnetic axis.
 
      Parameters
@@ -65,7 +68,15 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
      z_rot_mag = 1.5 * np.array([0, 0, 1])
      z_rot_mag = np.dot(Rrotmag, z_rot_mag)
 
-     return (x, y, z), z_rot, z_rot_mag
+     amplitude = amp * np.cos(PHI[q] + offset) + amp
+#      plt.figure()
+#      plt.scatter(x,amplitude, c='r')
+#      qx = x>0
+#      plt.scatter(x[qx],amplitude[qx], c='b')
+#      plt.scatter(y,amplitude)
+#      plt.scatter(z,amplitude)
+
+     return (x, y, z), z_rot, z_rot_mag, amplitude
 
 def create_spherical_grid(num_pts):
     """Method see:
@@ -92,7 +103,7 @@ def create_spherical_grid(num_pts):
     THETA = np.arccos(1 - 2 * indices/num_pts) #latitude
     PHI = np.pi * (1 + 5**0.5) * indices #longitude
 
-    return THETA, PHI
+    return THETA, PHI%(2*np.pi)
 
 
 def rotate_around_arb_axis(a, pos, axis):

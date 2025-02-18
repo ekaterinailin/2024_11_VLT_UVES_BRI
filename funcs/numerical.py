@@ -3,7 +3,7 @@ import numpy as np
 from .geometry import rotate_around_arb_axis, calculate_surface_element_velocities
 
 
-def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, 
+def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude,
                             dalpha=1e-8 * np.pi/180, normalize=True, foreshortening=False):
     """Calculate the broadened spectral line of the ring defined
     by x, y, z.
@@ -36,22 +36,20 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins,
     flux : array
         The flux of the spectral line.
     """
+
     # rotate the ring
     xr, _, _ = rotate_around_arb_axis(alpha, np.array([x, y, z]), z_rot)
 
     # calculate the surface element velocities
     dxr_visible = calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar)
 
-
     # define the visible part of the ring
     q = xr > 0
 
-
     if foreshortening == False:
-        weights = np.ones_like(dxr_visible)
+        weights = np.ones_like(dxr_visible) * amplitude[q]
     else:
-        weights = xr[q]
-
+        weights = xr[q] * amplitude[q]
 
     # bin the flux
     flux, _ = np.histogram(dxr_visible, bins=bins, weights=weights)
@@ -61,4 +59,4 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins,
         if max(flux) != 0:
             flux = flux / np.max(flux)
 
-    return flux
+    return flux, amplitude, q
