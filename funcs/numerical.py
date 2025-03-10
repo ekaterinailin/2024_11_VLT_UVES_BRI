@@ -1,6 +1,8 @@
 import numpy as np
+import xarray 
+from xhistogram.xarray import histogram 
 
-from .geometry import rotate_around_arb_axis, calculate_surface_element_velocities
+from .geometry import rotate_around_arb_axis, calculate_surface_element_velocities, rotate_around_arb_axis_x_only
 
 
 def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude,
@@ -37,26 +39,59 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
         The flux of the spectral line.
     """
 
+
     # rotate the ring
-    xr, _, _ = rotate_around_arb_axis(alpha, np.array([x, y, z]), z_rot)
+    xr = rotate_around_arb_axis_x_only(alpha, np.array([x, y, z]), z_rot)
+
+    # print(xr)
 
     # calculate the surface element velocities
-    dxr_visible = calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar)
+    dxr = calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar, xr)
+
 
     # define the visible part of the ring
     q = xr > 0
 
+    amplitude[~q] = 0
+    
     if foreshortening == False:
-        weights = np.ones_like(dxr_visible) * amplitude[q]
+        weights = xarray.DataArray(np.ones_like(dxr) * amplitude, dims=['phase', 'velocity'], name="weights")
     else:
-        weights = xr[q] * amplitude[q]
+
+        weights = xarray.DataArray(xr * amplitude, dims=['phase', 'velocity'], name="weights")
 
     # bin the flux
-    flux, _ = np.histogram(dxr_visible, bins=bins, weights=weights)
+
+    # bins_ = np.broadcast_to(bins, (dxr.shape[0],len(bins)))
+    # print(bins_.shape)
+    # print(dxr.shape)
+   
+
+    da = xarray.DataArray(dxr, dims=['phase', 'velocity'],
+                  name='griddata')
+    
+    # print(da.values)
+    
+    # print(len(weights))
+    # print(len(da))
+
+    if weights.shape[1] > 0:
+        flux = histogram(da, bins=[bins], dim=["velocity"], weights=weights)
+
+    else:
+        # print((weights.shape[0], len(bins)-1))
+        flux = np.zeros((weights.shape[0], len(bins)-1))
+
+    # print(flux.shape)
+    # flux, _ = np.histogram(dxr, bins=bins, weights=weights)
+
+    # print(flux.shape)
 
     # normalize the flux
+    # throw error until i fix this
     if normalize:
-        if max(flux) != 0:
-            flux = flux / np.max(flux)
+        return ValueError("Normalization not yet implemented")
+        # if max(flux) != 0:
+            # flux = flux / np.max(flux)
 
     return flux, amplitude, q

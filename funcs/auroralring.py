@@ -2,12 +2,12 @@
 from .analytical import get_analytical_spectral_line
 from .numerical import numerical_spectral_line
 from .geometry import create_spherical_grid, set_up_oblique_auroral_ring, rotate_around_arb_axis
-from .geometry_spot import get_two_spots
+from .geometry_spot import get_two_spots, get_one_spot
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-THETA, PHI = create_spherical_grid(int(900))
+THETA, PHI = create_spherical_grid(int(2900))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -39,9 +39,9 @@ class AuroralRing:
     """
 
     # init function takes the parameters of the ring and sets up the phi array
-    def __init__(self, i_rot, v_bins, v_mids, phi, omega, vmax, 
+    def __init__(self, i_rot, v_bins, v_mids, omega, vmax, phi=None, 
                  i_mag=None, latitude=None, width=None, longitude=None,
-                 latitude2 = None, longitude2 = None, width2 = None):
+                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -97,6 +97,8 @@ class AuroralRing:
 
 
         self.THETA, self.PHI = THETA, PHI
+
+        self.Rstar = Rstar
         
 
 
@@ -127,7 +129,7 @@ class AuroralRing:
 
         Parameters
         ----------
-        alpha : float
+        alpha : array
             The rotational phase of the star in rad.
         normalize : bool
             Whether to normalize the flux.
@@ -144,16 +146,23 @@ class AuroralRing:
                                                                             self.lat_max, self.lat_min, 
                                                                             self.i_rot, self.i_mag, amp, offset)
         
+
+        
+        # reshape output to the size of alpha array as the second dimension]
+        self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
+
+
         # calculate the flux
         flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
         
+        
         # self.amplitude = weights
         self.q = q
         return flux
     
-    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False):
+    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False, nspots=1):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
@@ -171,10 +180,15 @@ class AuroralRing:
             The flux of the ring at the given rotational phase.
         """
         # get the x, y, z positions of the ring
-        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_two_spots(self.THETA, self.PHI, 
+        if nspots == 2:
+            (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_two_spots(self.THETA, self.PHI, 
                                                                             self.latitude, self.longitude, self.width,
                                                                             self.latitude2, self.longitude2, self.width2, 
                                                                             self.i_rot)
+        elif nspots == 1:
+            (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_one_spot(self.THETA, self.PHI, 
+                                                                            self.latitude, self.longitude, self.width,
+                                                                            self.i_rot) 
        
         # calculate the flux
         flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
@@ -237,7 +251,7 @@ class AuroralRing:
         
 
         # plot the rotated blue points
-        ax.scatter(self.x, self.y, self.z, 
+        ax.scatter(xr, yr, zr, 
                    cmap="cividis", c=self.amplitude, norm="linear", alpha=ring_alpha)
 
 

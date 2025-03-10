@@ -69,6 +69,7 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
      z_rot_mag = np.dot(Rrotmag, z_rot_mag)
 
      amplitude = amp * np.cos(PHI[q] + offset) + amp
+#      amplitude[PHI[q] > np.pi] = 0
 #      plt.figure()
 #      plt.scatter(x,amplitude, c='r')
 #      qx = x>0
@@ -160,19 +161,32 @@ def rotate_around_arb_axis_x_only(a, pos, axis):
             rotated position(s)
       """
       # some shortcts
-      ca = np.cos(a)
-      cosa = 1 - ca
+      ca = np.cos(a) #1
+      cosa = 1 - ca # 0
       sa = np.sin(a)
       ux, uy, uz = axis
 
-      rot_x = np.array([[ca + ux**2 * cosa], [ux * uy * cosa - uz * sa], [uz * ux * cosa + uy * sa]]).reshape(len(a), 3)
+      rot_x = np.array([[ca + ux**2 * cosa], [ux * uy * cosa - uz * sa], [uz * ux * cosa + uy * sa]])
 
-      # print(rot_x.shape)
-      # print(pos.shape)
-      res =  rot_x @ pos
+      rot_x = rot_x.reshape(3, len(a))
+
+      
+
+      val = rot_x[0][:, np.newaxis] * pos[0] + rot_x[1][:, np.newaxis] * pos[1] + rot_x[2][:, np.newaxis] * pos[2]
+
+      # print(val.shape)
+      
+
+      
+      # print(rot_x)
+      # print(pos.T[0])
+
+      # res =   pos.T[0] * rot_x
+
+      # print(res)
      
       # print(res.shape)
-      return res
+      return val
 
 
 
