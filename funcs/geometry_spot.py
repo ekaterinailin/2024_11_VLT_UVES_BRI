@@ -68,3 +68,18 @@ def get_two_spots(THETA, PHI, lat1, lon1, r1, lat2, lon2, r2, inc):
     # return z_rot twice for compatibility 
     return (x, y, z), z_rot, z_rot, amplitude
 
+
+def get_one_spot(THETA, PHI, lat1, lon1, r1, inc):
+ 
+    # define the two spots
+    spot = create_spot(THETA, PHI, lat1, lon1, r1)
+
+    # rotate around the y-axis by the inclination angle
+    x, y, z, z_rot = rotate_inclination(spot, inc)
+
+    # amplitude uniform for now
+    amplitude = np.ones_like(x)
+
+    # return z_rot twice for compatibility 
+    return (x, y, z), z_rot, z_rot, amplitude
+

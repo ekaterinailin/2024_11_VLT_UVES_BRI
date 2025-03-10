@@ -124,23 +124,59 @@ def rotate_around_arb_axis(a, pos, axis):
             rotated position(s)
       """
       # some shortcts
-      cosa = 1 - np.cos(a)
       ca = np.cos(a)
+      cosa = 1 - ca
       sa = np.sin(a)
       ux, uy, uz = axis
 
-      Rrotstar = np.array([[ca + ux**2 * cosa, ux * uy * cosa - uz * sa, ux * uz * cosa + uy * sa],
-                              [uy * ux * cosa + uz * sa, ca + uy**2 * cosa, uy * uz * cosa - ux * sa],
-                              [uz * ux * cosa - uy * sa, uz * uy * cosa + ux * sa, ca + uz**2 * cosa]])
+      A = uz * ux * cosa
+      B = uy * sa
+      C = ux * sa
+      D = uz * sa
+      E = ux * uy * cosa
+      F = uz * uy * cosa
 
-      # rotate blue points
-      x, y, z = pos
-      xr, yr, zr = np.dot(Rrotstar, np.array([x, y, z]))
+      Rrotstar = np.array([[ca + ux**2 * cosa, E - D, A + B],
+                              [E + D, ca + uy**2 * cosa, F - C],
+                              [A - B, F + C, ca + uz**2 * cosa]])
 
-      return np.array([xr, yr, zr])
+      return np.dot(Rrotstar, pos)
+
+def rotate_around_arb_axis_x_only(a, pos, axis):
+      """Rotate pos around axis with angle.
+      
+      Parameters:
+      -----------
+      a : arrays
+            angles in radians
+      pos : array of the form: [x, y, z] or (3, N)
+            position(s) to be rotated
+      axis : array of the form: [x, y, z]
+            axis around which pos is rotated
+
+      Return:
+      --------
+      pos_rot : array of the form: [x, y, z] or (3, N)
+            rotated position(s)
+      """
+      # some shortcts
+      ca = np.cos(a)
+      cosa = 1 - ca
+      sa = np.sin(a)
+      ux, uy, uz = axis
+
+      rot_x = np.array([[ca + ux**2 * cosa], [ux * uy * cosa - uz * sa], [uz * ux * cosa + uy * sa]]).reshape(len(a), 3)
+
+      # print(rot_x.shape)
+      # print(pos.shape)
+      res =  rot_x @ pos
+     
+      # print(res.shape)
+      return res
 
 
-def calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar):
+
+def calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar, xalpha):
     """At a given phase angle alpha of the rotating star,
     calculate the radial velocity of the surface element from the
     x-component of the derivative
@@ -181,10 +217,10 @@ def calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, R
     """
 
     # rotate the surface element around the rotation axis
-    xr1, yr1, zr1 = rotate_around_arb_axis(alpha, np.array([x, y, z]), z_rot)
+    xr1 = xalpha
 
     # rotate the surface element around the rotation axis with an extra small angle
-    xr2, yr2, zr2 = rotate_around_arb_axis(alpha + dalpha, np.array([x, y, z]), z_rot)
+    xr2 = rotate_around_arb_axis_x_only(alpha + dalpha, np.array([x, y, z]), z_rot)
 
     # calculate the derivative of xr
     dxr = (xr2 - xr1) / dalpha * omega 
@@ -195,8 +231,4 @@ def calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, R
     # convert to km/s
     dxr = dxr * Rstar * 695700.
 
-    # then select only the positive values of xr
-    q = (xr1 > 0)
-
-    # return visible surface element velocities
-    return dxr[q]
+    return dxr
