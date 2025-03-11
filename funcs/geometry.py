@@ -68,7 +68,7 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
      z_rot_mag = 1.5 * np.array([0, 0, 1])
      z_rot_mag = np.dot(Rrotmag, z_rot_mag)
 
-     amplitude = amp * np.cos(PHI[q] + offset) + amp
+     amplitude = amp * np.cos(PHI[q] + offset) + 1.
 #      amplitude[PHI[q] > np.pi] = 0
 #      plt.figure()
 #      plt.scatter(x,amplitude, c='r')

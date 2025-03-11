@@ -149,11 +149,13 @@ class AuroralRing:
 
         
         # reshape output to the size of alpha array as the second dimension]
-        self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
 
+        # print(self.amplitude)
+        self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
+        # print(self.amplitude)
 
         # calculate the flux
-        flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
+        flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
         
@@ -191,7 +193,7 @@ class AuroralRing:
                                                                             self.i_rot) 
        
         # calculate the flux
-        flux, weights, q = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
+        flux, weights, q, xr, dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
         

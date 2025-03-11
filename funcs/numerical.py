@@ -52,6 +52,8 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
     # define the visible part of the ring
     q = xr > 0
 
+    # print("q", q.shape)
+    # print("amplitude", amplitude.shape)
     amplitude[~q] = 0
     
     if foreshortening == False:
@@ -59,12 +61,6 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
     else:
 
         weights = xarray.DataArray(xr * amplitude, dims=['phase', 'velocity'], name="weights")
-
-    # bin the flux
-
-    # bins_ = np.broadcast_to(bins, (dxr.shape[0],len(bins)))
-    # print(bins_.shape)
-    # print(dxr.shape)
    
 
     da = xarray.DataArray(dxr, dims=['phase', 'velocity'],
@@ -94,4 +90,4 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
         # if max(flux) != 0:
             # flux = flux / np.max(flux)
 
-    return flux, amplitude, q
+    return flux, amplitude, q, xr, dxr
