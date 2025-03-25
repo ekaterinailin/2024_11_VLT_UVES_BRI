@@ -83,3 +83,12 @@ def get_one_spot(THETA, PHI, lat1, lon1, r1, inc):
     # return z_rot twice for compatibility 
     return (x, y, z), z_rot, z_rot, amplitude
 
+def get_point_sources(lats, lons, amps):
+
+    x = np.sin(lats) * np.cos(lons)
+    y = np.sin(lats) * np.sin(lons)
+    z = np.cos(lats)
+    z_rot = np.array([0,0,1])
+
+    return (x, y, z), z_rot, z_rot, amps
+

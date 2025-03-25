@@ -2,12 +2,12 @@
 from .analytical import get_analytical_spectral_line
 from .numerical import numerical_spectral_line
 from .geometry import create_spherical_grid, set_up_oblique_auroral_ring, rotate_around_arb_axis
-from .geometry_spot import get_two_spots, get_one_spot
+from .geometry_spot import get_two_spots, get_one_spot, get_point_sources
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-THETA, PHI = create_spherical_grid(int(2900))
+THETA, PHI = create_spherical_grid(int(10000))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -41,7 +41,7 @@ class AuroralRing:
     # init function takes the parameters of the ring and sets up the phi array
     def __init__(self, i_rot, v_bins, v_mids, omega, vmax, phi=None, 
                  i_mag=None, latitude=None, width=None, longitude=None,
-                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None):
+                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None, amps=None):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -93,7 +93,7 @@ class AuroralRing:
         self.latitude2 = latitude2
         self.longitude2 = longitude2
         self.width2 = width2
-
+        self.amps = amps
 
 
         self.THETA, self.PHI = THETA, PHI
@@ -124,7 +124,7 @@ class AuroralRing:
                                             normalize=normalize)
     
     # define a method to get the flux of the ring numerically
-    def get_flux_numerically(self, alpha, amp, offset, normalize=True, foreshortening=False):
+    def get_flux_numerically(self, alpha, amp, offset, width, normalize=True, foreshortening=False):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
@@ -144,7 +144,7 @@ class AuroralRing:
         # get the x, y, z positions of the ring
         (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = set_up_oblique_auroral_ring(self.THETA, self.PHI, 
                                                                             self.lat_max, self.lat_min, 
-                                                                            self.i_rot, self.i_mag, amp, offset)
+                                                                            self.i_rot, self.i_mag, amp, offset, width)
         
 
         
@@ -191,9 +191,14 @@ class AuroralRing:
             (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_one_spot(self.THETA, self.PHI, 
                                                                             self.latitude, self.longitude, self.width,
                                                                             self.i_rot) 
+        elif nspots == 999:
+            (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_point_sources(self.latitude, self.longitude, self.amps) 
+            
+
+        self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
        
         # calculate the flux
-        flux, weights, q, xr, dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
+        flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
         

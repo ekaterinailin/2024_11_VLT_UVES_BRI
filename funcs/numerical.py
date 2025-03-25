@@ -1,6 +1,7 @@
 import numpy as np
 import xarray 
 from xhistogram.xarray import histogram 
+import matplotlib.pyplot as plt
 
 from .geometry import rotate_around_arb_axis, calculate_surface_element_velocities, rotate_around_arb_axis_x_only
 
@@ -55,6 +56,7 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
     # print("q", q.shape)
     # print("amplitude", amplitude.shape)
     amplitude[~q] = 0
+    # amplitude[amplitude<0] = 0
     
     if foreshortening == False:
         weights = xarray.DataArray(np.ones_like(dxr) * amplitude, dims=['phase', 'velocity'], name="weights")
@@ -73,6 +75,11 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
 
     if weights.shape[1] > 0:
         flux = histogram(da, bins=[bins], dim=["velocity"], weights=weights)
+        # binmids = (bins[1:] + bins[:-1]) / 2
+        # off = 0
+        # for f in flux:
+        #     plt.plot(binmids, f+off)
+        #     off += 1.5
 
     else:
         # print((weights.shape[0], len(bins)-1))
