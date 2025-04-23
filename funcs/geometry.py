@@ -42,12 +42,14 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
 
      # select the points on a sphere that are within the ring
      # around the magnetic axis
-     q = (((THETA > (np.pi/2 - PHI_max)) &
+     q1 = (((THETA > (np.pi/2 - PHI_max)) &
           (THETA < (np.pi/2 - PHI_min))) 
-      #     |
-      #     ((THETA > (-np.pi/2 + PHI_min)) &
-      #      (THETA < (-np.pi/2 + PHI_max)))
           )
+     
+     q2 = np.ones_like(THETA).astype(bool)
+
+     PHI, THETA = np.concatenate([PHI,PHI]), np.concatenate([THETA,THETA])
+     q = np.concatenate([q1, q2])
 
      # 3D rotation matrix for rotation around y axis with the i_rot + i_mag angle
      crotmag = np.cos(i_rot + i_mag)
@@ -78,17 +80,8 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
      z_rot_mag = 1.5 * np.array([0, 0, 1])
      z_rot_mag = np.dot(Rrotmag, z_rot_mag)
 
-#      amplitude = amp * np.cos(PHI[q] + offset) + 1.
-
-     # gaussian amplitude
-#      mu, sig = offset, width
-#      amplitude = amp * wrapped_gaussian(PHI[q], mu, sig) + 1.
      amplitude = np.ones_like(PHI[q])
-#      mask = (PHI[q] > offset) & ((PHI[q] < offset+width) | (PHI[q] < (offset+width)%(2*np.pi)))
-#      amplitude[~mask] = 0
-#      amplitude = amp * np.exp(-((PHI[q] - mu) ** 2) / (2 * sig ** 2)) + 1.
 
-     
 
 #      amplitude[PHI[q] > np.pi] = 0
 #      plt.figure()

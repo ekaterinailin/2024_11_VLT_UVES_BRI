@@ -3,7 +3,11 @@ import numpy as np
 def create_spot(THETA, PHI, lat, lon, r):
   
     # select pole-on using just radial extent
-    q = (THETA - r < 0)
+    q1 = (THETA - r < 0)
+    q2 = np.ones_like(THETA).astype(bool)
+
+    PHI, THETA = np.concatenate([PHI,PHI]), np.concatenate([THETA,THETA])
+    q = np.concatenate([q1, q2])
 
     # rotation matrix around y-axis
     crotl = np.cos(lat)

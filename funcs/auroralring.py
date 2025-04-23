@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-THETA, PHI = create_spherical_grid(int(10000))
+THETA, PHI = create_spherical_grid(int(5000))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -297,3 +297,44 @@ class AuroralRing:
         ax.set_axis_off()
 
         return fig, ax
+    
+
+
+    def plot_sphere_only(self, ax, sphere_alpha=0.05, c="#00204C", s=1):
+
+        ax.scatter(np.sin(self.THETA)*np.cos(self.PHI),
+              np.sin(self.THETA)*np.sin(self.PHI),
+              np.cos(self.THETA), c=c, alpha=sphere_alpha, s=s)
+        
+        # plot the x axis as a dashed line
+        ax.plot([-1.5, 1.5], [0, 0], [0, 0], c='k', ls='--')
+
+        
+    def plot_spot(self, ax, alpha, c="navy", ring_alpha=0.5, s=1):
+
+        xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
+
+        # THE SPOT ----------
+    
+        # plot the rotated blue points
+        ax.scatter(xr, yr, zr, c=c, alpha=ring_alpha, s=s)
+
+    def plot_ring(self, ax, alpha, c="navy", c_irot="red", c_imag="yellow", ring_alpha=0.5, s=1):
+
+        z_mag_alpha = rotate_around_arb_axis(alpha, self.z_rot_mag, self.z_rot)
+
+        xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
+
+        # plot z_rot
+        ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c_irot)
+
+        # THE RING ----------
+        
+
+        # plot the rotated blue points
+        ax.scatter(xr, yr, zr, 
+                   cmap="cividis", c=c, norm="linear", alpha=ring_alpha, s=s)
+
+
+        # plot z_rot_mag
+        ax.plot([0, z_mag_alpha[0]], [0, z_mag_alpha[1]], [0, z_mag_alpha[2]], c=c_imag)
