@@ -11,52 +11,41 @@ import numpy as np
 
 
 def get_equivr_lines(vrs, colat_min, colat_max, obliquity, rot, N=40):
-    """
-    Function to calculate the spectrum based on the given parameters.
+    """Get the x and z for the ring at a given radial velocty.
     
     Parameters:
     -----------
-    vrs : numpy array
-        Doppler velocity range
+    vrs : array-like
+        Radial velocities for which to compute the ring lines.
     colat_min : float
-        Minimum colatitude in radians
+        Minimum co-latitude of the ring in radians.
     colat_max : float
-        Maximum colatitude in radians
+        Maximum co-latitude of the ring in radians.
     obliquity : float
-        Obliquity in radians
+        Magnetic obliquity in radians.
     rot : float
-        Rotation in radians
+        Rotation phase in radians.
     N : int, optional
-        Number of points in the colatitude range (default is 40) -- take x4 for the final length
-    
+        Number of points to compute along the ring, default is 40. Sums to 4*N points in total.
+
     Returns:
     --------
-    xs : np.ndarray
-        A 2D array where each row corresponds to a different vr and contains the x coordinates of the ring at a given vr.
-    zs : np.ndarray
-        A 2D array where each row corresponds to a different vr and contains the z coordinates of the ring at a given vr.
-    masks : np.ndarray
-        A 2D boolean array where each row corresponds to a different vr and indicates whether the corresponding point is 
-        visible on the hemisphere and lies on the sphere.
-    -----------
+    xs : numpy array
+        x coordinates of the ring lines.
+    zs : numpy array
+        z coordinates of the ring lines.
+    masks : numpy array
+        Boolean mask indicating valid points on the ring.
+    
     """
-    #pre-compute the cosines and sines of the rotation and obliquity angles
     crot, srot = np.cos(rot), np.sin(rot)
     cobl, sobl = np.cos(obliquity), np.sin(obliquity)
 
-    # create the colatitude range
     colats = np.linspace(colat_min, colat_max, N)
-
-    # pre-compute the cosines and sines of the colatitudes    
-    ccolat = np.cos(colats)
-    scolat = np.sin(colats)
-
-    # Tile values
-    ccolat = np.tile(ccolat, 4)
-    scolat = np.tile(scolat, 4)
+    ccolat = np.tile(np.cos(colats), 4)  # (4N,)
+    scolat = np.tile(np.sin(colats), 4)  # (4N,)
     colats = np.tile(colats, 4)
 
-    # pluspi structure: [0]*N, [π]*N, [0]*N, [π]*N
     pluspi = np.concatenate([
         np.zeros(N),
         np.ones(N) * np.pi,
@@ -64,57 +53,51 @@ def get_equivr_lines(vrs, colat_min, colat_max, obliquity, rot, N=40):
         np.ones(N) * np.pi
     ])
 
-    # sigs: [1]*2N, [-1]*2N
     sigs = np.concatenate([
         np.ones(2 * N),
         -np.ones(2 * N)
     ])
 
-    # pre-compute the F, G, D values to save computation time
-    F = scolat * crot 
+    F = scolat * crot         # (4N,)
     F2 = F**2
     G = scolat * srot * cobl
     D = ccolat * sobl * srot
 
-    # fill a len(vrs) * 4*N array with zeros -- this will be the output dimensions
-    xs = np.zeros((len(vrs), 4 * N), dtype=float)
-    zs = np.zeros((len(vrs), 4 * N), dtype=float)
-    masks = np.zeros((len(vrs), 4 * N), dtype=bool)
-    
-    # loop over the vrs
-    for i, vr in enumerate(vrs):
+    vrs = np.asarray(vrs)     # (M,)
+    M = len(vrs)
+    xs = np.zeros((M, 4 * N), dtype=float)
+    zs = np.zeros((M, 4 * N), dtype=float)
+    masks = np.zeros((M, 4 * N), dtype=bool)
 
-        # calculate the vr^2
-        vr2 = vr**2
+    # Mask for valid vrs
+    valid_mask = np.abs(vrs) < 1.+1e-8
+    if not np.any(valid_mask):
+        return xs, zs, masks  # early exit if all are invalid
 
-        # calculate the D2 value
-        D2 = (-vr - D)**2
+    vrs_valid = vrs[valid_mask]             # (M_valid,)
+    vr2_valid = vrs_valid**2                # (M_valid,)
+    D2 = (-vrs_valid[:, None] - D[None, :])**2  # (M_valid, 4N)
 
-        # tan(phi)
-        tphi = (sigs*np.emath.sqrt(-D2**2 + D2*F2 + D2*G**2) + F*G) / (D2 - F2)
+    sqrt_term = np.emath.sqrt(-D2**2 + D2 * F2 + D2 * G**2)
+    tphi = (sigs[None, :] * sqrt_term + F[None, :] * G[None, :]) / (D2 - F2)
 
-        # revert to phi, get real values, and apply pluspi
-        phi = np.arctan(tphi).real + pluspi       
-        
-        # calculate the cosines and sines of phi
-        cphi, sphi = np.cos(phi).real, np.sin(phi).real   
+    phi = np.arctan(tphi).real + pluspi[None, :]
+    cphi = np.cos(phi).real
+    sphi = np.sin(phi).real
 
-        # equations (10) and (11) get you the x and z coordinates of the ring at a given vr
-        scolat_cphi = scolat * cphi
-        x_phi = crot * (cobl * scolat_cphi - sobl * ccolat) - srot * scolat * sphi
-        z_phi = sobl * scolat_cphi + cobl * ccolat
+    scolat_cphi = scolat[None, :] * cphi
+    x_phi = crot * (cobl * scolat_cphi - sobl * ccolat[None, :]) - srot * scolat[None, :] * sphi
+    z_phi = sobl * scolat_cphi + cobl * ccolat[None, :]
 
-        # mask points outside the colatitude limits, and non-finite values   
-        mask = ((np.abs(x_phi**2 + vr2 + z_phi**2 - 1) < 1e-4)& 
-                (x_phi > 0))
-        
-        # store the points
-        xs[i, :] = x_phi
-        zs[i, :] = z_phi
-        masks[i, :] = mask
+    mask = ((np.abs(x_phi**2 + vr2_valid[:, None] + z_phi**2 - 1) < 1e-4) &
+            (x_phi > 0))
+
+    # Assign results only to valid rows
+    xs[valid_mask, :] = x_phi
+    zs[valid_mask, :] = z_phi
+    masks[valid_mask, :] = mask
 
     return xs, zs, masks
-
 
 
 def compute_curve_length(x, z, masks, foreshortening=False):
@@ -138,7 +121,7 @@ def compute_curve_length(x, z, masks, foreshortening=False):
 
     # if no valid points are present, return 0
     if np.isnan(x).all():
-        return 0
+        return np.zeros(x.shape[0])
     
     # otherwise, compute the length of the curves for all vrs
     else:
