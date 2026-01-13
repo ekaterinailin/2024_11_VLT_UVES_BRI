@@ -2,16 +2,12 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-def wrapped_gaussian(x, mu, sigma, num_terms=3):
-    """Compute wrapped Gaussian function."""
-    return sum(
-        np.exp(-((x - mu + 2 * np.pi * k) ** 2) / (2 * sigma ** 2))
-        for k in range(-num_terms, num_terms + 1)
-    )
+from .background import add_background
+        
 
 
 def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
-                                i_rot, i_mag, amp, offset, width):
+                                i_rot, i_mag, background):
      """Set up an oblique auroral ring around the magnetic axis.
 
      Parameters
@@ -28,6 +24,8 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
            Inclination of rotation axis in radians with the right convention.
      i_mag : float
            Inclination of magnetic axis in radians relative to rotation axis.
+     background : float
+           Background amplitude
 
      Returns
      -------
@@ -42,14 +40,12 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
 
      # select the points on a sphere that are within the ring
      # around the magnetic axis
-     q1 = (((THETA > (np.pi/2 - PHI_max)) &
+     q = (((THETA > (np.pi/2 - PHI_max)) &
           (THETA < (np.pi/2 - PHI_min))) 
           )
      
-     q2 = np.ones_like(THETA).astype(bool)
 
-     PHI, THETA = np.concatenate([PHI,PHI]), np.concatenate([THETA,THETA])
-     q = np.concatenate([q1, q2])
+     q, PHI, THETA, amplitude = add_background(q, THETA, PHI, background)
 
      # 3D rotation matrix for rotation around y axis with the i_rot + i_mag angle
      crotmag = np.cos(i_rot + i_mag)
@@ -80,16 +76,7 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
      z_rot_mag = 1.5 * np.array([0, 0, 1])
      z_rot_mag = np.dot(Rrotmag, z_rot_mag)
 
-     amplitude = np.ones_like(PHI[q])
-
-
-#      amplitude[PHI[q] > np.pi] = 0
-#      plt.figure()
-#      plt.scatter(PHI[q],amplitude, c='r')
-#      qx = x>0
-#      plt.scatter(x[qx],amplitude[qx], c='b')
-#      plt.scatter(y,amplitude)
-#      plt.scatter(z,amplitude)
+#      amplitude = np.ones_like(PHI[q])
 
      return (x, y, z), z_rot, z_rot_mag, amplitude
 

@@ -28,16 +28,13 @@ if __name__ == "__main__":
     # ncalls = 10000
 
     # read from command line instead
-    med_min = sys.argv[1]
-    full_sub = sys.argv[2]
-    foreshortening = bool(int(sys.argv[3]))
-    modelname = sys.argv[4]
+    foreshortening = bool(int(sys.argv[1]))
+    modelname = sys.argv[2]
     # ncalls = int(sys.argv[5])
 
-    description = (f"median or minimum spectra?: {med_min}\nfull or quiescence subtracted?"
-                f": {full_sub}\nforeshortening: {foreshortening}\nmodel: {modelname}")
+    description = (f"Foreshortening: {foreshortening}\nmodel: {modelname}")
     
-    extension = f"{med_min}spec_{full_sub}_{modelname}_{foreshortening}"
+    extension = f"{modelname}_{foreshortening}"
 
     # inclination of rotation axis in radians with the right convention
     i_rot = np.pi/2 - 90 * np.pi/180
@@ -54,7 +51,11 @@ if __name__ == "__main__":
     vmax = omega * R_star * 695700. / 86400. # km/s
 
     # data
-    df = pd.read_csv(f'data/lsr_norm_spectra_{med_min}spec.csv', index_col=0, header=[0,1])
+    df = pd.read_csv(f'data/lsr_norm_spectra.csv', index_col=0)
+
+    # take wavelength above 6570 AA to calculate the std
+    dferrs = df[df.index.astype(float) > 6570]
+    ystds = dferrs.std(axis=0).values
 
     # select only index values between 6559 and 6566 
     df = df.loc[(df.index > 6559.5) & (df.index < 6566)]
@@ -66,50 +67,35 @@ if __name__ == "__main__":
     vbins = ((vbins - 6562.8) / 6562.8 * c).to(u.km/u.s).value
     vmids = (vbins[1:] + vbins[:-1]) / 2
 
-    # for each column in df, select the median subcolumn
-    ys_ = []
-    ystds = []
-
-    # get the median and std values for each column 
-    for col in df.columns.levels[0]:
-        for subcol in df.columns.levels[1]:
-            if subcol == "median":
-                ys_.append(df[col, subcol].values)
-            elif subcol == "std":
-                ystds.append(df[col, subcol].values)
+    # take all 49 spectra
+    ys_ = df.values
 
     # invert the order of ys and ystds
     ys_ = ys_[::-1]
     ystds = ystds[::-1]
 
     # convert to numpy arrays (and take square of the stds to get variance)
-    ys_ = np.array(ys_)
-    yerr2 = np.array(ystds).astype(float)**2
+    ys = np.array(ys_).T
+    yerr2 = (np.array(ystds).astype(float)**2)
+    # reshape yerr2 from (49,) to (49, 1) for broadcasting
+    yerr2 = yerr2.reshape(-1, 1)
 
-    # define how many subspectra we have and generate the rotational phase array
-    N = 10
-    subspecs = 3
-    alpha_edges = np.linspace(0, 2*np.pi, N * subspecs + 1)
-    alphas = (alpha_edges[1:] + alpha_edges[:-1]) / 2
+    print(np.isfinite(yerr2).all())
+    print(np.isfinite(ys).all())
+
+    # get the rotational phase angles from the column names
+    alphas = (df.columns.values.astype(float) % 1) * 2 * np.pi
 
     # velocity step size
     ddv = vmids[1] - vmids[0]
 
-    # do we use the full spectrum or subtract the quiescence?
-    if full_sub  == "full":
-        ys = ys_
-    elif full_sub == "sub":
-        ys = ys_ - ys_[1] + 1
-
-
     # diagnostics figure
     off=0
     plt.figure(figsize=(6,10))
-    midphase = alphas[::3]
     for i, y in enumerate(ys):
         plt.scatter(vmids, y+off, s=2, c="steelblue")
         plt.axhline(1+off, c="k", ls="--")
-        plt.text(vmids[-1]+5, 1+off, f"{midphase[i]/np.pi/2:.1f}")
+        plt.text(vmids[-1]+5, 1+off, f"{alphas[i]/np.pi/2:.1f}")
         off += 0.8
     plt.xlim(vmids[0], vmids[-1])
     plt.xlabel("Velocity [km/s]")
@@ -120,12 +106,13 @@ if __name__ == "__main__":
 
     # ---------------------------------------------------------------------------------------------------------------------
     # set up the sampler
-    sampler, p1, model, loglike = setup_model_sampler(modelname, i_rot, omega, vmax, R_star, subspecs, ddv, vbins, vmids, yerr2, ys, 
+    sampler, p1, model, loglike, obj = setup_model_sampler(modelname, i_rot, omega, vmax, R_star, ddv, vbins, vmids, yerr2, ys, 
                                         alphas, foreshortening=foreshortening)
     
     # ---------------------------------------------------------------------------------------------------------------------
     # run sampler
-    result = sampler.run(min_num_live_points=400, dlogz=0.5, viz_callback=False)#, max_ncalls=ncalls)
+    result = sampler.run(min_num_live_points=100, dlogz=0.5, viz_callback=False)#, max_ncalls=ncalls)
+    result = sampler.run(min_num_live_points=100, dlogz=0.5, viz_callback=False)#, max_ncalls=ncalls)
     sampler.print_results() 
 
     # ---------------------------------------------------------------------------------------------------------------------
@@ -196,15 +183,15 @@ if __name__ == "__main__":
     # now also save the median and std best_fit values to a table
     # init the table with the column names if it doesn't exist
     try:
-        df = pd.read_csv(f"results/results_ultranest_{modelname}.csv")
+        df = pd.read_csv(f"results/allspec_results_ultranest_{modelname}.csv")
     except:
-        df = pd.DataFrame(columns=["med_min", "full_sub", "model", "foreshortening", "AIC"] + p1)
+        df = pd.DataFrame(columns=["model", "foreshortening", "AIC"] + p1)
 
     # add the new row
-    df = pd.concat([df, pd.DataFrame([[med_min, full_sub, modelname, foreshortening, AIC] + list(res)], columns=df.columns)], ignore_index=True)
+    df = pd.concat([df, pd.DataFrame([[modelname, foreshortening, AIC] + list(res)], columns=df.columns)], ignore_index=True)
 
     # save the table
-    df.to_csv(f"results/results_ultranest_{modelname}.csv", index=False)
+    df.to_csv(f"results/allspec_results_ultranest_{modelname}.csv", index=False)
 
     print("\nDone!\n")
 

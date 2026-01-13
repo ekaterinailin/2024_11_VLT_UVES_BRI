@@ -19,7 +19,7 @@ from funcs.auroralring import AuroralRing
 
 def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl, 
                alphas=None, foreshortening=False, i_rot=0, omega=0, vmax=0, 
-               R_star=0, subspecs=3, ddv=0.1, obj_only=False): 
+               R_star=0, ddv=0.1, obj_only=False, background=0): 
 
     # mid latitude of ring around magnetic axis in radians
     mid_lat = phimin + dphi / 2
@@ -27,19 +27,16 @@ def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl,
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, i_mag=imag, latitude=mid_lat,
                         width=dphi, Rstar=R_star,  
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, )
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax)
 
     alphas_ = alphas + alpha_0 
 
-    spectra = ring.get_flux_numerically(alphas_, 0, 0, np.pi*2, normalize=False, foreshortening=foreshortening)
+    spectra = ring.get_flux_numerically(alphas_, 0, 0, np.pi*2, normalize=False, 
+                                        foreshortening=foreshortening, background=background)
 
     if obj_only:
         return ring
-    else:
-        
-        # sum every three spectra consecutively
-        spectra = np.array([np.sum(spectra[i:i+subspecs], axis=0) for i in range(0, len(spectra), subspecs)])
-    
+    else:    
         # wav = ring.v_mids / 2.9979246e5 * 6562.8 + 6562.8
         dv = broaden / ddv
         spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
@@ -55,26 +52,24 @@ def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl,
 
 def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, 
                i_rot=0, omega=0, vmax=0, R_star=0, ddv=0.1,alphas=0,
-             foreshortening=True, subspecs=3, obj_only=False): 
+             foreshortening=True, obj_only=False, croissant=False,
+             background=0): 
 
   
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, latitude=lat1,
                         width=width1, Rstar=R_star,  
                          longitude=lon1, 
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, )
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, croissant=croissant)
 
     dv = broaden / ddv
 
-    spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening, nspots=1)
+    spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening, nspots=1,
+                                             background=background)
 
     if obj_only:
         return ring
     else:
-
-        # sum every three spectra consecutively
-        spectra = np.array([np.sum(spectra[i:i+subspecs], axis=0) for i in range(0, len(spectra), subspecs)])
-
 
         spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
         maxval = np.max(spectra)
@@ -87,7 +82,7 @@ def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden,
 def model_two_spots(vbins, vmids, lat1, lon1, width1, lat2, lon2, width2, ampl, broaden, 
                     alphas = None,ddv=0.1,
                     i_rot=0, omega=0, vmax=0, R_star=0,
-                    foreshortening=True, subspecs=3, obj_only=False): 
+                    foreshortening=True, obj_only=False): 
 
   
     # define the auroral ring
@@ -103,9 +98,6 @@ def model_two_spots(vbins, vmids, lat1, lon1, width1, lat2, lon2, width2, ampl, 
         return ring
     else:
 
-        # sum every three spectra consecutively
-        spectra = np.array([np.sum(spectra[i:i+subspecs], axis=0) for i in range(0, len(spectra), subspecs)])
-
         # apply thermal broadening
         spectra = np.array([gaussian_filter1d(spectrum, broaden / ddv) for spectrum in spectra])
 
@@ -119,7 +111,7 @@ def model_two_spots(vbins, vmids, lat1, lon1, width1, lat2, lon2, width2, ampl, 
 
 def model_points(vbins, vmids, lat1, lon1,lat2, lon2, relamp, ampl, broaden,
                     i_rot=0, omega=0, vmax=0, R_star=0,ddv=0.1,alphas=None,
-                 foreshortening=True, subspecs=3, obj_only=False):   
+                 foreshortening=True, obj_only=False):   
 
   
     # define the auroral ring
@@ -133,9 +125,6 @@ def model_points(vbins, vmids, lat1, lon1,lat2, lon2, relamp, ampl, broaden,
     if obj_only:
         return ring
     else:
-
-        # sum every three spectra consecutively
-        spectra = np.array([np.sum(spectra[i:i+subspecs], axis=0) for i in range(0, len(spectra), subspecs)])
 
         # apply thermal broadening
         spectra = np.array([gaussian_filter1d(spectrum, broaden / ddv) for spectrum in spectra])
@@ -262,14 +251,14 @@ def prior_transform_points(cube):
 
     return params
 
-def setup_model_sampler(modelname, i_rot, omega, vmax, R_star, subspecs, ddv, 
+def setup_model_sampler(modelname, i_rot, omega, vmax, R_star, ddv, 
                   vbins, vmids, yerr2, ys,alphas, foreshortening):
      
     if modelname == "ring":
         model = lambda *args: model_ring(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, 
-                                         R_star=R_star, subspecs=subspecs, ddv=ddv, foreshortening=foreshortening)   
+                                         R_star=R_star, ddv=ddv, foreshortening=foreshortening)   
         obj = lambda *args: model_ring(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, 
-                                         R_star=R_star, subspecs=subspecs, ddv=ddv, foreshortening=foreshortening, obj_only=True)
+                                         R_star=R_star, ddv=ddv, foreshortening=foreshortening, obj_only=True)
         p1 = ["imag", "phimin", "dphi", "alpha_0", "broaden","ampl"]
         def loglike(theta):
             imag, phimin, dphi, alpha_0, broaden, ampl = theta
@@ -280,9 +269,9 @@ def setup_model_sampler(modelname, i_rot, omega, vmax, R_star, subspecs, ddv,
 
     elif modelname == "spot":
         model = lambda *args: model_spot(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, R_star=R_star,
-                                          ddv=ddv, foreshortening=foreshortening, subspecs=subspecs)
+                                          ddv=ddv, foreshortening=foreshortening)
         obj = lambda *args: model_spot(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, R_star=R_star,
-                                          ddv=ddv, foreshortening=foreshortening, subspecs=subspecs, obj_only=True)
+                                          ddv=ddv, foreshortening=foreshortening, obj_only=True)
         p1 = ["lat1", "lon1", "width1", "ampl", "broaden"]
         def loglike(theta):
             lat1, lon1, width1, ampl, broaden = theta
@@ -293,9 +282,9 @@ def setup_model_sampler(modelname, i_rot, omega, vmax, R_star, subspecs, ddv,
 
     elif modelname == "twospots":
         model = lambda *args: model_two_spots(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, R_star=R_star, 
-                                              ddv=ddv, foreshortening=foreshortening, subspecs=subspecs)
+                                              ddv=ddv, foreshortening=foreshortening)
         obj = lambda *args: model_two_spots(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, R_star=R_star, 
-                                              ddv=ddv, foreshortening=foreshortening, subspecs=subspecs, obj_only=True)
+                                              ddv=ddv, foreshortening=foreshortening, obj_only=True)
         p1 = ["lat1", "lon1", "width1", "lat2", "lon2", "width2", "ampl", "broaden"]
         def loglike(theta):
             lat1, lon1, width1, lat2, lon2, width2, ampl, broaden = theta
@@ -306,7 +295,7 @@ def setup_model_sampler(modelname, i_rot, omega, vmax, R_star, subspecs, ddv,
 
     elif modelname == "points":
         model = lambda *args: model_points(*args, alphas=alphas, i_rot=i_rot, omega=omega, vmax=vmax, R_star=R_star, 
-                                           ddv=ddv, foreshortening=foreshortening, subspecs=subspecs)
+                                           ddv=ddv, foreshortening=foreshortening)
         p1 = ["lat1", "lon1", "lat2", "lon2", "relamp", "ampl", "broaden"]
         def loglike(theta):
             lat1, lon1, lat2, lon2, relamp, ampl, broaden = theta

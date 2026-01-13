@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-THETA, PHI = create_spherical_grid(int(5000))
+THETA, PHI = create_spherical_grid(int(10000))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -41,7 +41,7 @@ class AuroralRing:
     # init function takes the parameters of the ring and sets up the phi array
     def __init__(self, i_rot, v_bins, v_mids, omega, vmax, phi=None, 
                  i_mag=None, latitude=None, width=None, longitude=None,
-                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None, amps=None):
+                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None, amps=None, croissant=False):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -99,6 +99,7 @@ class AuroralRing:
         self.THETA, self.PHI = THETA, PHI
 
         self.Rstar = Rstar
+        self.croissant = croissant
         
 
 
@@ -124,7 +125,8 @@ class AuroralRing:
                                             normalize=normalize)
     
     # define a method to get the flux of the ring numerically
-    def get_flux_numerically(self, alpha, amp, offset, width, normalize=True, foreshortening=False):
+    def get_flux_numerically(self, alpha, amp, offset, width, normalize=True, foreshortening=False,
+                             background=0):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
@@ -135,6 +137,8 @@ class AuroralRing:
             Whether to normalize the flux.
         foreshortening : bool
             Whether to include geometric (Lambertian) foreshortening in the calculation.
+        background : float
+            The background level to add to the flux. Default is 0.
 
         Returns
         -------
@@ -144,27 +148,20 @@ class AuroralRing:
         # get the x, y, z positions of the ring
         (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = set_up_oblique_auroral_ring(self.THETA, self.PHI, 
                                                                             self.lat_max, self.lat_min, 
-                                                                            self.i_rot, self.i_mag, amp, offset, width)
+                                                                            self.i_rot, self.i_mag, background)
         
-
-        
-        # reshape output to the size of alpha array as the second dimension]
-
-        # print(self.amplitude)
         self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
-        # print(self.amplitude)
+
 
         # calculate the flux
         flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
         
-        
-        # self.amplitude = weights
         self.q = q
         return flux
     
-    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False, nspots=1):
+    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False, nspots=1, background=0):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
@@ -175,6 +172,10 @@ class AuroralRing:
             Whether to normalize the flux.
         foreshortening : bool
             Whether to include geometric (Lambertian) foreshortening in the calculation.
+        nspots : int
+            The number of spots to include (1 or 2).
+        background : float
+            The background level to add to the flux. Default is 0.
 
         Returns
         -------
@@ -190,17 +191,21 @@ class AuroralRing:
         elif nspots == 1:
             (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_one_spot(self.THETA, self.PHI, 
                                                                             self.latitude, self.longitude, self.width,
-                                                                            self.i_rot) 
+                                                                            self.i_rot, background, croissant = self.croissant) 
         elif nspots == 999:
             (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_point_sources(self.latitude, self.longitude, self.amps) 
             
 
         self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
+
+        self.amplitude += background
        
         # calculate the flux
         flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
+        
+
         
         # self.amplitude = weights
         self.q = q
@@ -269,7 +274,7 @@ class AuroralRing:
         # set figure limits
         ax.set_xlim(-1.2, 1.2)
         ax.set_ylim(-1.2, 1.2)
-        ax.set_zlim(-.95, .95)
+        ax.set_zlim(-1.2, 1.2)
 
         # label axes
         ax.set_xlabel('X')
@@ -290,11 +295,13 @@ class AuroralRing:
 
     def plot_setup_sphere(self):
 
-        fig = plt.figure(figsize=(10, 5))
+        fig = plt.figure(figsize=(8, 8))
         spec = fig.add_gridspec(ncols=1, nrows=1)
 
         ax = fig.add_subplot(spec[0, 0], projection='3d')
         ax.set_axis_off()
+
+        ax.set_box_aspect([1,1,1])  # aspect ratio is 1:1:1
 
         return fig, ax
     
@@ -307,7 +314,7 @@ class AuroralRing:
               np.cos(self.THETA), c=c, alpha=sphere_alpha, s=s)
         
         # plot the x axis as a dashed line
-        ax.plot([-1.5, 1.5], [0, 0], [0, 0], c='k', ls='--')
+        ax.plot([-1.2, 1.2], [0, 0], [0, 0], c='k', ls='--')
 
         
     def plot_spot(self, ax, alpha, c="navy", ring_alpha=0.5, s=1):
@@ -315,9 +322,16 @@ class AuroralRing:
         xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
 
         # THE SPOT ----------
-    
+        # use self.amplitude for color with viridis colormap
+        ampls = self.amplitude[0,:] - np.min(self.amplitude[0,:])
+        ax.scatter(xr, yr, zr,  cmap="viridis", c=self.amplitude[0,:], 
+                                      norm="linear", alpha=ring_alpha, s=s)
+
         # plot the rotated blue points
-        ax.scatter(xr, yr, zr, c=c, alpha=ring_alpha, s=s)
+        # ax.scatter(xr, yr, zr, c=c, alpha=ring_alpha, s=s)
+
+        # plot z_rot
+        ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c)
 
     def plot_ring(self, ax, alpha, c="navy", c_irot="red", c_imag="yellow", ring_alpha=0.5, s=1):
 
@@ -333,7 +347,7 @@ class AuroralRing:
 
         # plot the rotated blue points
         ax.scatter(xr, yr, zr, 
-                   cmap="cividis", c=c, norm="linear", alpha=ring_alpha, s=s)
+                   cmap="cividis", c=self.amplitude[0,:], norm="linear", alpha=ring_alpha, s=s)
 
 
         # plot z_rot_mag

@@ -55,14 +55,15 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
 
     # print("q", q.shape)
     # print("amplitude", amplitude.shape)
-    amplitude[~q] = 0
+    a = np.copy(amplitude)
+    a[~q] = 0
     # amplitude[amplitude<0] = 0
     
     if foreshortening == False:
-        weights = xarray.DataArray(np.ones_like(dxr) * amplitude, dims=['phase', 'velocity'], name="weights")
+        weights = xarray.DataArray(np.ones_like(dxr) * a, dims=['phase', 'velocity'], name="weights")
     else:
 
-        weights = xarray.DataArray(xr * amplitude, dims=['phase', 'velocity'], name="weights")
+        weights = xarray.DataArray(xr * a, dims=['phase', 'velocity'], name="weights")
    
 
     da = xarray.DataArray(dxr, dims=['phase', 'velocity'],
