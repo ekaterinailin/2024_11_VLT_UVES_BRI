@@ -41,7 +41,8 @@ class AuroralRing:
     # init function takes the parameters of the ring and sets up the phi array
     def __init__(self, i_rot, v_bins, v_mids, omega, vmax, phi=None, 
                  i_mag=None, latitude=None, width=None, longitude=None,
-                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None, amps=None, croissant=False):
+                 latitude2 = None, longitude2 = None, width2 = None, Rstar=None, 
+                 amps=None, croissant=False, typ="ring"):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -100,6 +101,8 @@ class AuroralRing:
 
         self.Rstar = Rstar
         self.croissant = croissant
+
+        self.typ = typ
         
 
 
@@ -307,53 +310,12 @@ class AuroralRing:
     
 
     def plot_sphere_only(self, ax, sphere_alpha=0.05, c="#00204C", s=1,
-                        grid_color='gray', grid_alpha=0.3, grid_linewidth=0.5,
-                        n_lat=6, n_lon=12):
+                       ):
 
         ax.scatter(np.sin(self.THETA)*np.cos(self.PHI),
             np.sin(self.THETA)*np.sin(self.PHI),
             np.cos(self.THETA), c=c, alpha=sphere_alpha, s=s)
         
-        # # plot the x axis as a dashed line
-        # ax.plot([-1.2, 1.2], [0, 0], [0, 0], c='k', ls='--')
-        
-        # # Rotation matrix around y-axis by i_rot
-        # cos_i = np.cos(self.i_rot)
-        # sin_i = np.sin(self.i_rot)
-        
-        # def rotate_y(x, y, z):
-        #     """Rotate coordinates around the y-axis by i_rot"""
-        #     x_rot = cos_i * x + sin_i * z
-        #     y_rot = y
-        #     z_rot = -sin_i * x + cos_i * z
-        #     return x_rot, y_rot, z_rot
-        
-        # def mask_hidden(x, y, z):
-        #     """Mask points where x < 0"""
-        #     x_masked = np.where(x >= 0, x, np.nan)
-        #     y_masked = np.where(x >= 0, y, np.nan)
-        #     z_masked = np.where(x >= 0, z, np.nan)
-        #     return x_masked, y_masked, z_masked
-        
-        # # Plot latitude lines (parallels)
-        # phi_grid = np.linspace(0, 2*np.pi, 100)
-        # for theta in np.linspace(0, np.pi, n_lat + 2)[1:-1]:  # Exclude poles
-        #     x = np.sin(theta) * np.cos(phi_grid)
-        #     y = np.sin(theta) * np.sin(phi_grid)
-        #     z = np.cos(theta) * np.ones_like(phi_grid)
-        #     x_rot, y_rot, z_rot = rotate_y(x, y, z)
-        #     x_masked, y_masked, z_masked = mask_hidden(x_rot, y_rot, z_rot)
-        #     ax.plot(x_masked, y_masked, z_masked, c=grid_color, alpha=grid_alpha, lw=grid_linewidth)
-        
-        # # Plot longitude lines (meridians)
-        # theta_grid = np.linspace(0, np.pi, 50)
-        # for phi in np.linspace(0, 2*np.pi, n_lon, endpoint=False):
-        #     x = np.sin(theta_grid) * np.cos(phi)
-        #     y = np.sin(theta_grid) * np.sin(phi)
-        #     z = np.cos(theta_grid)
-        #     x_rot, y_rot, z_rot = rotate_y(x, y, z)
-        #     x_masked, y_masked, z_masked = mask_hidden(x_rot, y_rot, z_rot)
-        #     ax.plot(x_masked, y_masked, z_masked, c=grid_color, alpha=grid_alpha, lw=grid_linewidth)
         
     def plot_spot(self, ax, alpha, c="navy", ring_alpha=0.5, s=1):
 
@@ -372,7 +334,7 @@ class AuroralRing:
         
         
         xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
-
+        # xr, yr, zr =  self.x, self.y, self.z
         
 
         # THE SPOT ----------

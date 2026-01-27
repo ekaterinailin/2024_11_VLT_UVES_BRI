@@ -19,7 +19,7 @@ from funcs.auroralring import AuroralRing
 
 def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl, 
                alphas=None, foreshortening=False, i_rot=0, omega=0, vmax=0, 
-               R_star=0, ddv=0.1, obj_only=False, background=0): 
+               R_star=0, ddv=0.1, obj_only=False, background=0, typ="ring"): 
 
     # mid latitude of ring around magnetic axis in radians
     mid_lat = phimin + dphi / 2
@@ -27,7 +27,7 @@ def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl,
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, i_mag=imag, latitude=mid_lat,
                         width=dphi, Rstar=R_star,  
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax)
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, typ=typ)
 
     alphas_ = alphas + alpha_0 
 
@@ -53,14 +53,14 @@ def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl,
 def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, 
                i_rot=0, omega=0, vmax=0, R_star=0, ddv=0.1,alphas=0,
              foreshortening=True, obj_only=False, croissant=False,
-             background=0): 
+             background=0, typ="spot"): 
 
   
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, latitude=lat1,
                         width=width1, Rstar=R_star,  
                          longitude=lon1, 
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, croissant=croissant)
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, croissant=croissant, typ=typ)
 
     dv = broaden / ddv
 
