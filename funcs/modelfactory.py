@@ -82,7 +82,7 @@ class SpectralModelFactory:
         """Create a spot spectrum."""
         return model_spot(
             self.vbins, self.vmids, lat, lon, width, ampl, self.broaden,
-            typ="spot", **self._common_kwargsz_rot
+            typ="spot", **self._common_kwargs
         )
     
     def ring(self, i_mag, phimin, dphi, alpha_0, ampl):

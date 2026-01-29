@@ -1,13 +1,9 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
-
-from .background import add_background
-        
 
 
 def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
-                                i_rot, i_mag, background):
+                                i_rot, i_mag):
      """Set up an oblique auroral ring around the magnetic axis.
 
      Parameters
@@ -24,8 +20,7 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
            Inclination of rotation axis in radians with the right convention.
      i_mag : float
            Inclination of magnetic axis in radians relative to rotation axis.
-     background : float
-           Background amplitude
+  
 
      Returns
      -------
@@ -44,8 +39,7 @@ def set_up_oblique_auroral_ring(THETA, PHI, PHI_max, PHI_min,
           (THETA < (np.pi/2 - PHI_min))) 
           )
      
-
-     q, PHI, THETA, amplitude = add_background(q, THETA, PHI, background)
+     amplitude = np.ones_like(PHI[q]) 
 
      # 3D rotation matrix for rotation around y axis with the i_rot + i_mag angle
      crotmag = np.cos(i_rot + i_mag)

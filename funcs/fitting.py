@@ -30,7 +30,7 @@ def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl,
 
     alphas_ = alphas + alpha_0 
 
-    spectra = ring.get_flux_numerically(alphas_, 0, 0, np.pi*2, normalize=False, 
+    spectra = ring.get_flux_numerically(alphas_, normalize=False, 
                                         foreshortening=foreshortening,)
 
     if obj_only:
@@ -63,7 +63,7 @@ def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden,
 
     dv = broaden / ddv
 
-    spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening, nspots=1,)
+    spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening)
 
     if obj_only:
         return ring

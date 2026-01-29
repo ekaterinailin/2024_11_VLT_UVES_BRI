@@ -55,9 +55,9 @@ def rotate_inclination(xyz, inclination):
 
 
 
-def get_one_spot(THETA, PHI, lat1, lon1, r1, inc, background, croissant=False):
+def get_one_spot(THETA, PHI, lat1, lon1, r1, inc):
  
-    _ = create_spot(THETA, PHI, lat1, lon1, r1, background)
+    _ = create_spot(THETA, PHI, lat1, lon1, r1)
     spot = _[:3]
     amplitude = _[3]
 
