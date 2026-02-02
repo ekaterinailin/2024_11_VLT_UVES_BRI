@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from functools import wraps
-
+import scipy
 import inspect
 
 
@@ -53,6 +53,9 @@ class SpectralModelFactory:
             'lat2': (0, np.pi/2),
             'lat3': (0, np.pi/2),
             'lat4': (0, np.pi/2),
+            'truelat': (0,np.pi),
+            'truelat2': (0,np.pi),
+            "trueringlat": (-np.pi/2,np.pi/2),
             
             # Amplitude parameters (0 to 1, or adjust as needed)
             'amplon1': (0,3),
@@ -67,6 +70,7 @@ class SpectralModelFactory:
             'ringlat': (-np.pi/2, 0),
             'ringwidth': (0, np.pi/2),
             'i_mag': (0, np.pi/2),
+            
             'alpha0': (0, 2*np.pi),
             'alpha_0': (0, 2*np.pi), 
             'amplback': (0,3),
@@ -599,6 +603,7 @@ class SpectralModelFactory:
         param_names = self.get_param_names(model_func)
         bounds = self.get_bounds(model_func)
         n_params = len(param_names)
+        # cosine_distribution = scipy.stats.cosine()
         
         def prior_transform(cube):
             """Transform unit cube to physical parameters."""
@@ -606,8 +611,10 @@ class SpectralModelFactory:
             
             for i, (name, (lower, upper)) in enumerate(zip(param_names, bounds)):
                 
-                if ('lat' in name) | (name=='ringlat') | (name=='i_mag'):
+                if ('lat' in name) | (name=='ringlat') | (name=='i_mag') | (name=='truei_mag') | (name=='trueringlat'):
                     params[i] = cube[i]
+                elif "truelat" in name:
+                    params[i] = cube[i]  # cosine distribution between -pi/2 and pi/2
                 else:
                     # All other parameters: uniform in bounds
                     params[i] = cube[i] * (upper - lower) + lower
@@ -642,10 +649,20 @@ class SpectralModelFactory:
                 for i, name in enumerate(self.get_param_names(model_func)):
                     if name.startswith('lat') and name != 'ringlat':
                         params[i] = np.arcsin(params[i])
-                    elif name == 'i_mag':
-                        params[i] = np.arcsin(params[i])
                     elif name == 'ringlat':
                         params[i] = np.arccos(params[i])
+                    elif name == "i_mag":   
+                        params[i] = np.arcsin(params[i])
+                    elif name == 'truei_mag':
+                        params[i] = np.arcsin(params[i]) + np.pi/2
+                    elif name == 'trueringlat':
+                        params[i] = np.arccos(params[i])
+                    elif name == 'truelat':
+                        params[i] = np.arcsin(params[i]) + np.pi/2  # convert back to 0 to pi
+                    elif name == 'truelat2':
+                        params[i] = np.arcsin(params[i]) + np.pi/2  # convert back to 0 to pi
+                    elif name == "ringwidth":
+                        params[i] = params[i]  # sign flip to go to colatitude
                 model_spectra = model_func(*params)
                 logf = -0.5 * np.sum(np.log(2 * np.pi * yerr2))
                 loglike = -0.5 * np.sum((data - model_spectra) ** 2 / yerr2) + logf

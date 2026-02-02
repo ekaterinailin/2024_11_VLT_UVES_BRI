@@ -5,6 +5,8 @@ from .modelfactory import SpectralModelFactory
 from scipy.interpolate import interp1d
 import astropy.units as u
 
+PROT_LSR = 2.864 / 24.  # days
+
 
 def setup_lsr_factory(**kwargs):
 
@@ -14,7 +16,7 @@ def setup_lsr_factory(**kwargs):
     i_rot = np.pi/2 - 90 / 180 * np.pi  # stellar inclination in radians
 
     # rotation period in days
-    P_rot = 2.864 / 24.
+    P_rot = PROT_LSR
     omega = 2 * np.pi / P_rot
 
     # stellar radius in solar radii
