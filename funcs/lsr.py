@@ -129,10 +129,19 @@ def register_lsr_models(model):
             model.spot(lat1, lon1, model.width1, amplon1),
             model.ring(i_mag, ringlat, model.ringwidth, alpha0, amplring)
         )
+    
+    @model.register
+    def loose_ring_two_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, amplring, ringlat, i_mag, alpha0):
+        model.ringwidth = np.pi/6
+        return model.combine(
+            model.spot(lat1, lon1, model.width1, amplon1),
+            model.spot(lat2, lon2, model.width1, amplon2),
+            model.ring(i_mag, ringlat, model.ringwidth, alpha0, amplring)
+        )
 
     names = ['Loose Ring', 'Ring + 1 Spot', 'Ring + 2 Spots',
              'Quiescent bkg. + 1 Spot', 'Quiescent bkg. + 2 Spots',
-             '2 Spots','Loose Ring + 1 Spot']
+             '2 Spots','Loose Ring + 1 Spot', "Loose Ring + 2 Spots"]
     return [ring_only, ring_one_spot, ring_two_spots, 
             quiescent_background_one_spot, quiescent_background_two_spots,
-            two_spots, loose_ring_one_spot], names
+            two_spots, loose_ring_one_spot, loose_ring_two_spots], names

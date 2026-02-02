@@ -6,6 +6,8 @@ import numpy as np
 import glob
 import os
 
+PROT_BRI = 3.052 / 24.  # days
+
 def setup_bri_factory(**kwargs):
 
     vbins = np.linspace(-90, 90, 101)
@@ -14,7 +16,7 @@ def setup_bri_factory(**kwargs):
     i_rot = np.pi/2 - 51.7 / 180 * np.pi  # stellar inclination in radians
 
     # rotation period in days
-    P_rot = 3.052 / 24.
+    P_rot = PROT_BRI
     omega = 2 * np.pi / P_rot
 
     # stellar radius in solar radii
