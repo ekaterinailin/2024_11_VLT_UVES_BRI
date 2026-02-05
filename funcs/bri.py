@@ -80,8 +80,32 @@ def get_bri_data(path, vmids):
         interp_fluxes.append(f(vmids))
 
     data = np.array(interp_fluxes)
-    # data = data[::-1]
-    data_err = 0.05 * np.ones_like(data)
+    data_err = np.zeros_like(data)
+
+    errpath = "results_bri/subtracted_spectra_errvals.txt"
+    # read the error values from the text file of this form
+    with open(errpath, "r") as f:
+        lines = f.readlines()
+        errvals = []
+        for line in lines:
+            parts = line.strip().split(":")
+            if len(parts) == 2:
+                errvals.append(float(parts[1].strip()))
+
+    # we have 8 error values, but only 4 spectra, take 1 and 4, 2 and 5, 3 and 6, 4 and 7 and quadratically add
+    selected_errvals = []
+    for i in range(4):
+        err1 = errvals[i]
+        err2 = errvals[i + 4]
+        combined_err = np.sqrt(err1**2 + err2**2) / 2 
+        selected_errvals.append(combined_err)
+
+    # propagate to data_err
+    for i in range(4):
+        data_err[i,:] = selected_errvals[i]
+    
+    assert (data_err != 0).all(), "Data errors contain zeros!"
+
 
     dalpha = (0.75 *u.hr / (3.052 * u.day) * 2 * np.pi).value 
     print(f"BRI data dalpha (radians): {dalpha}")

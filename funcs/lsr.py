@@ -72,6 +72,23 @@ def get_lsr_data(path, vmids):
     data = data[::-1]
 
     data_err = np.full_like(data, 0.1)  # assuming constant error for simplicity
+
+    errpath = "results_bri/subtracted_spectra_errvals.txt"
+    # read the error values from the text file of this form
+    with open(errpath, "r") as f:
+        lines = f.readlines()
+        errvals = []
+        for line in lines:
+            errval = float(line.split(":")[1].strip())
+            errvals.append(errval)
+
+    # propagate to data_err
+    for i in range(len(data)):
+        data_err[i,:] = errvals[i]
+
+    # reverse order here as well to match the data
+    data_err = data_err[::-1]
+
     return data, data_err
 
 
@@ -151,7 +168,7 @@ def register_lsr_models(model):
     def loose_ring_quiescent_background(amplring, ringlat, i_mag, alpha0, ringwidth2, amplback):
         model.ringwidth = np.pi
         return model.combine(model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring),
-                             model.ring(0, -model.ringwidth/2, model.ringwidth, 0, amplback))
+                             model.equatorial_ring(amplback))
     
     @model.register
     def three_spots(lon1, lon2, lon3, amplon1, amplon2, amplon3, lat1, lat2, lat3):

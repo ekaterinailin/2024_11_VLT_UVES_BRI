@@ -99,7 +99,7 @@ def fit_gp(x, maskedx, maskedy, maskedyerr):
 if __name__ == "__main__":
 
     # find all file names
-    files = glob.glob('spectra/*RED_SCI_POINT*.fits')
+    files = glob.glob('spectra/spectra_bri/*RED_SCI_POINT*.fits')
 
     # sort files by date
     files.sort()
@@ -291,6 +291,21 @@ if __name__ == "__main__":
         # store the subtracted spectrum
         nspecs.append(subtracted)
         newerrs.append(err)
+
+    # measure the mean and std of the subtracted spectra in the regions excluding the H alpha line
+    errvals = []
+    for nspec, nerr, tstamp in list(zip(nspecs, newerrs, timestamps)):
+        mask = (nnwavs > minhalpharange) & (nnwavs < maxhalpharange)
+        mean = np.mean(nspec[~mask])
+        std = np.std(nspec[~mask])
+        print(f"Subtracted spectrum {tstamp}: mean={mean:.3f}, std={std:.3f}")
+        errvals.append(std)
+
+    # save errvals to a text file
+    with open("results_bri/subtracted_spectra_errvals.txt", "w") as f:
+        for tstamp, errval in zip(timestamps, errvals):
+            f.write(f"{tstamp}: {errval:.3f}\n")
+        
 
 
     # PLOT THE SUBTRACTED SPECTRA -------------------------------------------------
