@@ -16,12 +16,12 @@ from scipy.ndimage import gaussian_filter1d
 from funcs.auroralring import AuroralRing
 
 
-def model_ring(vbins, vmids, imag, phimin, dphi, alpha_0,broaden, ampl, 
+def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl, 
                alphas=None, foreshortening=False, i_rot=0, omega=0, vmax=0, 
                R_star=0, ddv=0.1, obj_only=False, typ="ring"): 
 
     # mid latitude of ring around magnetic axis in radians
-    mid_lat = phimin + dphi / 2
+    mid_lat = phimax - dphi / 2
 
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, i_mag=imag, latitude=mid_lat,

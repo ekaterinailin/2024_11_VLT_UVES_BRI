@@ -71,7 +71,7 @@ class SpectralModelFactory:
             'amplring2': (0,3),
             
             # Ring-specific parameters
-            'ringlat': (-np.pi/2, 0),
+            'ringlat': (0, np.pi/2),
             'ringwidth': (0, np.pi/2),
             'ringwidth2': (0, np.pi/2),
             'i_mag': (0, np.pi/2),
@@ -94,16 +94,16 @@ class SpectralModelFactory:
             typ="spot", **self._common_kwargs
         )
     
-    def ring(self, i_mag, phimin, dphi, alpha_0, ampl):
+    def ring(self, i_mag, phimax, dphi, alpha_0, ampl):
         """Create a ring spectrum."""
         return model_ring(
-            self.vbins, self.vmids, i_mag, phimin, dphi, alpha_0, 
+            self.vbins, self.vmids, i_mag, phimax, dphi, alpha_0, 
             self.broaden, ampl, typ="ring", **self._common_kwargs
         )
     
     def equatorial_ring(self, amplback):
         """Create a standard equatorial ring."""
-        return self.ring(0, -self.ringwidth/2, self.ringwidth, 0, amplback)
+        return self.ring(0, self.ringwidth/2, self.ringwidth, 0, amplback)
     
     # @staticmethod
     def combine(self, *components):
