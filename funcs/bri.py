@@ -7,6 +7,7 @@ import glob
 import os
 
 PROT_BRI = 3.052 / 24.  # days
+NAME_BRI = "BRI 0021"
 
 def setup_bri_factory(**kwargs):
 
@@ -145,23 +146,8 @@ def register_bri_models(model, dalpha=0):
             model.spot(truelat, lon1, model.width1, amplon1)
         )
 
-    # @model.register
-    # def ring_one_spot(lon1, amplon1, lat1, amplring):
-    #     model.ringwidth = np.pi/6
-    #     return model.combine(
-    #         model.spot(lat1, lon1, model.width1, amplon1),
-    #         model.equatorial_ring(amplring)
-    #     )
 
-    # @model.register
-    # def quiescent_background_one_spot(lon1, amplon1, lat1, amplring):
-    #     model.ringwidth = np.pi
-    #     return model.combine(
-    #         model.spot(lat1, lon1, model.width1, amplon1),
-    #         model.equatorial_ring(amplring)
-    #     )
-
-    names = ['Loose Ring', "Spot", "2 Spots", "Loose Ring + 1 Spot"]#, 'Ring + 1 Spot', 'Ring + 2 Spots',
+    names = ['Ring', "Spot", "2 Spots", "Ring + 1 Spot"]#, 'Ring + 1 Spot', 'Ring + 2 Spots',
             #  'Quiescent bkg. + 1 Spot', 'Quiescent bkg. + 2 Spots',
             #  '2 Spots','Loose Ring + 1 Spot']
     return [ring_only, spot_only, two_spots, loose_ring_one_spot], names#, ring_one_spot, ring_two_spots, 

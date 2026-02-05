@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 import astropy.units as u
 
 PROT_LSR = 2.864 / 24.  # days
+NAME_LSR = "LSR J1835"
 
 
 def setup_lsr_factory(**kwargs):
@@ -121,6 +122,13 @@ def register_lsr_models(model):
             model.spot(lat2, lon2, model.width1, amplon2),
         )
     
+    @model.register
+    def two_loose_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, width1, width2):
+        return model.combine(
+            model.spot(lat1, lon1, width1, amplon1),
+            model.spot(lat2, lon2, width1, amplon2),
+        )
+    
 
     @model.register
     def loose_ring_one_spot(lon1, amplon1, lat1, amplring, ringlat, i_mag, alpha0):
@@ -138,10 +146,28 @@ def register_lsr_models(model):
             model.spot(lat2, lon2, model.width1, amplon2),
             model.ring(i_mag, ringlat, model.ringwidth, alpha0, amplring)
         )
+    
+    @model.register
+    def loose_ring_quiescent_background(amplring, ringlat, i_mag, alpha0, ringwidth2, amplback):
+        model.ringwidth = np.pi
+        return model.combine(model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring),
+                             model.ring(0, -model.ringwidth/2, model.ringwidth, 0, amplback))
+    
+    @model.register
+    def three_spots(lon1, lon2, lon3, amplon1, amplon2, amplon3, lat1, lat2, lat3):
+        model.width1 = np.pi/5
+        return model.combine(
+            model.spot(lat1, lon1, model.width1, amplon1),
+            model.spot(lat2, lon2, model.width1, amplon2),
+            model.spot(lat3, lon3, model.width1, amplon3),
+        )
+    
 
-    names = ['Loose Ring', 'Ring + 1 Spot', 'Ring + 2 Spots',
-             'Quiescent bkg. + 1 Spot', 'Quiescent bkg. + 2 Spots',
-             '2 Spots','Loose Ring + 1 Spot', "Loose Ring + 2 Spots"]
+    names = ['Ring', 'Eq. ring + 1 Spot', 'Eq. ring + 2 Spots',
+             'Q. bkg. + 1 Spot', 'Q. bkg. + 2 Spots',
+             '2 Spots','Ring + 1 Spot', "Ring + 2 Spots", '2 Loose Spots',
+             'Q. bkg. + Ring', "Three Spots"]
     return [ring_only, ring_one_spot, ring_two_spots, 
             quiescent_background_one_spot, quiescent_background_two_spots,
-            two_spots, loose_ring_one_spot, loose_ring_two_spots], names
+            two_spots, loose_ring_one_spot, loose_ring_two_spots, two_loose_spots,
+            loose_ring_quiescent_background, three_spots], names

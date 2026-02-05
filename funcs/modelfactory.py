@@ -47,6 +47,10 @@ class SpectralModelFactory:
             'lon2': (np.pi*3/4, 2*np.pi),
             'lon3': (0, 2*np.pi),
             'lon4': (0, 2*np.pi),
+
+            # width1 and width2 (0 to 45 degrees)
+            'width1': (0, np.pi/4),
+            'width2': (0, np.pi/4),
             
             # Latitude parameters (0 to 90 degrees)
             'lat1': (0, np.pi/2),
@@ -69,6 +73,7 @@ class SpectralModelFactory:
             # Ring-specific parameters
             'ringlat': (-np.pi/2, 0),
             'ringwidth': (0, np.pi/2),
+            'ringwidth2': (0, np.pi/2),
             'i_mag': (0, np.pi/2),
             
             'alpha0': (0, 2*np.pi),
@@ -96,9 +101,9 @@ class SpectralModelFactory:
             self.broaden, ampl, typ="ring", **self._common_kwargs
         )
     
-    def equatorial_ring(self, ampl):
+    def equatorial_ring(self, amplback):
         """Create a standard equatorial ring."""
-        return self.ring(0, -self.ringwidth/2, self.ringwidth, 0, ampl)
+        return self.ring(0, -self.ringwidth/2, self.ringwidth, 0, amplback)
     
     # @staticmethod
     def combine(self, *components):
@@ -647,7 +652,7 @@ class SpectralModelFactory:
 
                 # get through param names and convert to sin(lat) or cos(ringlat) if needed
                 for i, name in enumerate(self.get_param_names(model_func)):
-                    if name.startswith('lat') and name != 'ringlat':
+                    if name == 'lat1' or name == 'lat2' or name == 'lat3' or name == 'lat4':
                         params[i] = np.arcsin(params[i])
                     elif name == 'ringlat':
                         params[i] = np.arccos(params[i])
