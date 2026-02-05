@@ -309,7 +309,6 @@ class AuroralRing:
 
         # rotation_axis = np.array([0,0,1])
         # rotation_axis = Rrot @ rotation_axis
-        print(self.z_rot)
         
         
         xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)

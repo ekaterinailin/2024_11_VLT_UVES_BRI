@@ -169,18 +169,7 @@ def rotate_around_arb_axis_x_only(a, pos, axis):
 
       val = rot_x[0][:, np.newaxis] * pos[0] + rot_x[1][:, np.newaxis] * pos[1] + rot_x[2][:, np.newaxis] * pos[2]
 
-      # print(val.shape)
-      
-
-      
-      # print(rot_x)
-      # print(pos.T[0])
-
-      # res =   pos.T[0] * rot_x
-
-      # print(res)
-     
-      # print(res.shape)
+  
       return val
 
 
