@@ -71,9 +71,9 @@ def get_lsr_data(path, vmids):
     data = np.array(interp_fluxes)
     data = data[::-1]
 
-    data_err = np.full_like(data, 0.1)  # assuming constant error for simplicity
+    data_err = np.full_like(data, 0.)  # assuming constant error for simplicity
 
-    errpath = "results_bri/subtracted_spectra_errvals.txt"
+    errpath = "results_lsr/subtracted_spectra_errvals.txt"
     # read the error values from the text file of this form
     with open(errpath, "r") as f:
         lines = f.readlines()
@@ -98,13 +98,13 @@ def register_lsr_models(model):
     def ring_only(amplring, ringlat, ringwidth, i_mag, alpha0):
         return model.ring(i_mag, ringlat, ringwidth, alpha0, amplring)
 
-    @model.register
-    def ring_one_spot(lon1, amplon1, lat1, amplring):
-        model.ringwidth = np.pi/6
-        return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.equatorial_ring(amplring)
-        )
+    # @model.register
+    # def ring_one_spot(lon1, amplon1, lat1, amplring):
+    #     model.ringwidth = np.pi/6
+    #     return model.combine(
+    #         model.spot(lat1, lon1, model.width1, amplon1),
+    #         model.equatorial_ring(amplring)
+    #     )
 
     @model.register
     def quiescent_background_one_spot(lon1, amplon1, lat1, amplring):
@@ -114,14 +114,14 @@ def register_lsr_models(model):
             model.equatorial_ring(amplring)
         )
 
-    @model.register
-    def ring_two_spots(lon1, lon3, amplon1, amplon3, amplring, lat1, lat2):
-        model.ringwidth = np.pi/6
-        return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.spot(lat2, lon3, model.width1, amplon3),
-            model.equatorial_ring(amplring)
-        )
+    # @model.register
+    # def ring_two_spots(lon1, lon3, amplon1, amplon3, amplring, lat1, lat2):
+    #     model.ringwidth = np.pi/6
+    #     return model.combine(
+    #         model.spot(lat1, lon1, model.width1, amplon1),
+    #         model.spot(lat2, lon3, model.width1, amplon3),
+    #         model.equatorial_ring(amplring)
+    #     )
 
     @model.register
     def quiescent_background_two_spots(lon1, lon2, amplon1, amplon2, amplback, lat1, lat2):
@@ -132,19 +132,19 @@ def register_lsr_models(model):
             model.equatorial_ring(amplback),
         )
     
-    @model.register
-    def two_spots(lon1, lon2, amplon1, amplon2, lat1, lat2):
-        return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.spot(lat2, lon2, model.width1, amplon2),
-        )
+    # @model.register
+    # def two_spots(lon1, lon2, amplon1, amplon2, lat1, lat2):
+    #     return model.combine(
+    #         model.spot(lat1, lon1, model.width1, amplon1),
+    #         model.spot(lat2, lon2, model.width1, amplon2),
+    #     )
     
-    @model.register
-    def two_loose_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, width1, width2):
-        return model.combine(
-            model.spot(lat1, lon1, width1, amplon1),
-            model.spot(lat2, lon2, width1, amplon2),
-        )
+    # @model.register
+    # def two_loose_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, width1, width2):
+    #     return model.combine(
+    #         model.spot(lat1, lon1, width1, amplon1),
+    #         model.spot(lat2, lon2, width1, amplon2),
+    #     )
     
 
     @model.register
@@ -170,21 +170,20 @@ def register_lsr_models(model):
         return model.combine(model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring),
                              model.equatorial_ring(amplback))
     
-    @model.register
-    def three_spots(lon1, lon2, lon3, amplon1, amplon2, amplon3, lat1, lat2, lat3):
-        model.width1 = np.pi/5
-        return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.spot(lat2, lon2, model.width1, amplon2),
-            model.spot(lat3, lon3, model.width1, amplon3),
-        )
+    # @model.register
+    # def three_spots(lon1, lon2, lon3, amplon1, amplon2, amplon3, lat1, lat2, lat3):
+    #     model.width1 = np.pi/4
+    #     return model.combine(
+    #         model.spot(lat1, lon1, model.width1, amplon1),
+    #         model.spot(lat2, lon2, model.width1, amplon2),
+    #         model.spot(lat3, lon3, model.width1, amplon3),
+    #     )
     
 
-    names = ['Ring', 'Eq. ring + 1 Spot', 'Eq. ring + 2 Spots',
+    names = ['Ring', #'Eq. ring + 1 Spot', 'Eq. ring + 2 Spots', '2 Spots',
              'Q. bkg. + 1 Spot', 'Q. bkg. + 2 Spots',
-             '2 Spots','Ring + 1 Spot', "Ring + 2 Spots", '2 Loose Spots',
-             'Q. bkg. + Ring', "Three Spots"]
-    return [ring_only, ring_one_spot, ring_two_spots, 
-            quiescent_background_one_spot, quiescent_background_two_spots,
-            two_spots, loose_ring_one_spot, loose_ring_two_spots, two_loose_spots,
-            loose_ring_quiescent_background, three_spots], names
+            'Ring + 1 Spot', "Ring + 2 Spots", #'2 Loose Spots',
+             'Q. bkg. + Ring']#, "Three Spots"]
+    return [ring_only, quiescent_background_one_spot, quiescent_background_two_spots,
+             loose_ring_one_spot, loose_ring_two_spots,
+            loose_ring_quiescent_background], names
