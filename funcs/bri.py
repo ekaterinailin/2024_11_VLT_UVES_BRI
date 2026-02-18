@@ -52,11 +52,13 @@ def get_bri_data(path, vmids):
     file_list = glob.glob(os.path.join(path, "lsr_0p*"))
     file_list.sort()
 
+    print(f"Found {len(file_list)} spectra files in {path}.")
+
     fluxes = []
     wavs = []
     alphas = []
     for file in file_list:
-        alphas.append(float(file.split("lsr_0p")[1].split(".txt")[0]) / 1000000)
+        alphas.append(float(file.split("lsr_0p")[1]) / 1000000)
         data = np.loadtxt(file)
         wav = data[:,0]
         flux = data[:,1]
@@ -126,48 +128,48 @@ def register_bri_models(model, dalpha=0):
         return model.ring(truei_mag, trueringlat, ringwidth, alpha0, amplring)
     
     @model.register
-    def spot_only(lon1, amplon1, truelat):
-        m1 = (model.spot(truelat, lon1, model.width1, amplon1) - 1) / 3 + 1
-        m2 = (model.spot(truelat, lon1 + dalpha/2, model.width1, amplon1) - 1) / 3 + 1
-        m3 = (model.spot(truelat, lon1 - dalpha/2, model.width1, amplon1) - 1) / 3 + 1
+    def spot_only(lon1, amplon1, truelat, width1):
+        m1 = (model.spot(truelat, lon1, width1, amplon1) - 1) / 3 + 1
+        m2 = (model.spot(truelat, lon1 + dalpha/2, width1, amplon1) - 1) / 3 + 1
+        m3 = (model.spot(truelat, lon1 - dalpha/2, width1, amplon1) - 1) / 3 + 1
         return model.combine(m1, m2, m3)
     
     @model.register
-    def spot_only_show(lon1, amplon1, truelat):
-        return model.spot(truelat, lon1, model.width1, amplon1)
+    def spot_only_show(lon1, amplon1, truelat, width1):
+        return model.spot(truelat, lon1, width1, amplon1)
         
     @model.register
-    def two_spots(lon1, amplon1, truelat, lon2, amplon2, truelat2):
-        m1 = (model.spot(truelat, lon1, model.width1, amplon1) - 1) / 3 + 1
-        m2 = (model.spot(truelat, lon1 + dalpha/2, model.width1, amplon1) - 1) / 3 + 1
-        m3 = (model.spot(truelat, lon1 - dalpha/2, model.width1, amplon1) - 1) / 3 + 1
-        n1 = (model.spot(truelat2, lon2, model.width1, amplon2) - 1) / 3 + 1
-        n2 = (model.spot(truelat2, lon2 + dalpha/2, model.width1, amplon2) - 1) / 3 + 1
-        n3 = (model.spot(truelat2, lon2 - dalpha/2, model.width1, amplon2) - 1) / 3 + 1
+    def two_spots(lon1, amplon1, truelat, lon2, amplon2, truelat2, width1, width2):
+        m1 = (model.spot(truelat, lon1, width1, amplon1) - 1) / 3 + 1
+        m2 = (model.spot(truelat, lon1 + dalpha/2, width1, amplon1) - 1) / 3 + 1
+        m3 = (model.spot(truelat, lon1 - dalpha/2, width1, amplon1) - 1) / 3 + 1
+        n1 = (model.spot(truelat2, lon2, width2, amplon2) - 1) / 3 + 1
+        n2 = (model.spot(truelat2, lon2 + dalpha/2, width2, amplon2) - 1) / 3 + 1
+        n3 = (model.spot(truelat2, lon2 - dalpha/2, width2, amplon2) - 1) / 3 + 1
         return model.combine(m1, m2, m3, n1, n2, n3)
     
     @model.register
-    def two_spots_show(lon1, amplon1, truelat, lon2, amplon2, truelat2):
+    def two_spots_show(lon1, amplon1, truelat, lon2, amplon2, truelat2, width1, width2):
         return model.combine(
-            model.spot(truelat, lon1, model.width1, amplon1),
-            model.spot(truelat2, lon2, model.width1, amplon2)
+            model.spot(truelat, lon1, width1, amplon1),
+            model.spot(truelat2, lon2, width2, amplon2)
         )
     
     @model.register
-    def loose_ring_one_spot(truelat, lon1, amplon1, amplring, trueringlat, truei_mag, alpha0):
-        m1 = (model.ring(truei_mag, trueringlat, model.ringwidth, alpha0 - dalpha/2, amplring) - 1) / 3 + 1
-        m2 = (model.ring(truei_mag, trueringlat, model.ringwidth, alpha0, amplring) - 1) / 3 +1
-        m3 = (model.ring(truei_mag, trueringlat, model.ringwidth, alpha0 + dalpha/2, amplring)-1) / 3 +1
-        n1 = (model.spot(truelat, lon1, model.width1, amplon1) - 1) / 3 + 1
-        n2 = (model.spot(truelat, lon1 + dalpha/2, model.width1, amplon1) - 1) / 3 + 1
-        n3 = (model.spot(truelat, lon1 - dalpha/2, model.width1, amplon1) - 1) / 3 + 1
+    def loose_ring_one_spot(truelat, lon1, amplon1, amplring, trueringlat, truei_mag, alpha0, width1, ringwidth):
+        m1 = (model.ring(truei_mag, trueringlat, ringwidth, alpha0 - dalpha/2, amplring) - 1) / 3 + 1
+        m2 = (model.ring(truei_mag, trueringlat, ringwidth, alpha0, amplring) - 1) / 3 +1
+        m3 = (model.ring(truei_mag, trueringlat, ringwidth, alpha0 + dalpha/2, amplring)-1) / 3 +1
+        n1 = (model.spot(truelat, lon1, width1, amplon1) - 1) / 3 + 1
+        n2 = (model.spot(truelat, lon1 + dalpha/2, width1, amplon1) - 1) / 3 + 1
+        n3 = (model.spot(truelat, lon1 - dalpha/2, width1, amplon1) - 1) / 3 + 1
         return model.combine(m1, m2, m3, n1, n2, n3)
     
     @model.register
-    def loose_ring_one_spot_show(truelat, lon1, amplon1, amplring, trueringlat, truei_mag, alpha0):
+    def loose_ring_one_spot_show(truelat, lon1, amplon1, amplring, trueringlat, truei_mag, alpha0, width1, ringwidth):
         return model.combine(
-            model.ring(truei_mag, trueringlat, model.ringwidth, alpha0, amplring),
-            model.spot(truelat, lon1, model.width1, amplon1)
+            model.ring(truei_mag, trueringlat, ringwidth, alpha0, amplring),
+            model.spot(truelat, lon1, width1, amplon1)
         )
 
 
