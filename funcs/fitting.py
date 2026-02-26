@@ -14,9 +14,10 @@ import numpy as np
 
 from scipy.ndimage import gaussian_filter1d
 from funcs.auroralring import AuroralRing
+from funcs.broadening import convolve_voigt_kms
 
 
-def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl, 
+def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl, gamma_kms,
                alphas=None, foreshortening=False, i_rot=0, omega=0, vmax=0, 
                R_star=0, ddv=0.1, obj_only=False, typ="ring"): 
 
@@ -37,8 +38,15 @@ def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl,
         return ring
     else:    
         # wav = ring.v_mids / 2.9979246e5 * 6562.8 + 6562.8
-        dv = broaden / ddv
-        spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
+        # dv = broaden / ddv
+        # spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
+
+        return convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl) 
+
+
+def convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl):
+        spectra = np.array([convolve_voigt_kms(vmids, spectrum, broaden, gamma_kms,
+                       kernel_width_kms=None) for spectrum in spectra])
 
         # print(spectra.shape)    
         maxval = np.max(spectra)
@@ -49,7 +57,7 @@ def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl,
             return spectra / maxval * ampl + 1
     
 
-def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, 
+def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, gamma_kms,
                i_rot=0, omega=0, vmax=0, R_star=0, ddv=0.1,alphas=0,
              foreshortening=True, obj_only=False, 
              typ="spot"): 
@@ -61,7 +69,6 @@ def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden,
                          longitude=lon1, 
                     v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax,  typ=typ)
 
-    dv = broaden / ddv
 
     spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening)
 
@@ -69,11 +76,5 @@ def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden,
         return ring
     else:
 
-        spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
-        maxval = np.max(spectra)
-
-        if maxval == 0:
-            return np.ones_like(spectra[0]) 
-        else:
-            return spectra / maxval * ampl + 1
+        return convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl)
     

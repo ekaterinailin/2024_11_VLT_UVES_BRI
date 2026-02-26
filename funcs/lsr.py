@@ -13,7 +13,8 @@ def setup_lsr_factory(**kwargs):
 
     vbins = np.linspace(-90, 90, 101)
     vmids = 0.5 * (vbins[1:] + vbins[:-1])
-    broaden = 18
+    broaden = 9#18
+    gamma_kms = 10.5  
     i_rot = np.pi/2 - 90 / 180 * np.pi  # stellar inclination in radians
 
     # rotation period in days
@@ -37,7 +38,7 @@ def setup_lsr_factory(**kwargs):
 
     # Initialize once:
     return SpectralModelFactory(
-        vbins, vmids, broaden, i_rot, omega, vmax, R_star, ddv, alphas, radius, ringwidth,
+        vbins, vmids, broaden, i_rot, omega, vmax, R_star, ddv, alphas, radius, ringwidth, gamma_kms,
         registry_file='my_models.json', **kwargs), vmids, alphas
 
 
@@ -107,11 +108,11 @@ def register_lsr_models(model):
     #     )
 
     @model.register
-    def quiescent_background_one_spot(lon1, amplon1, lat1, amplring):
+    def quiescent_background_one_spot(lon3, amplon1, lat1, amplback, width1):
         model.ringwidth = np.pi
         return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.equatorial_ring(amplring)
+            model.spot(lat1, lon3, width1, amplon1),
+            model.equatorial_ring(amplback)
         )
 
     # @model.register
@@ -124,11 +125,11 @@ def register_lsr_models(model):
     #     )
 
     @model.register
-    def quiescent_background_two_spots(lon1, lon2, amplon1, amplon2, amplback, lat1, lat2):
+    def quiescent_background_two_spots(lon1, lon2, amplon1, amplon2, amplback, lat1, lat2, width1, width2):
         model.ringwidth = np.pi
         return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.spot(lat2, lon2, model.width1, amplon2),
+            model.spot(lat1, lon1, width1, amplon1),
+            model.spot(lat2, lon2, width2, amplon2),
             model.equatorial_ring(amplback),
         )
     
@@ -148,26 +149,33 @@ def register_lsr_models(model):
     
 
     @model.register
-    def loose_ring_one_spot(lon1, amplon1, lat1, amplring, ringlat, i_mag, alpha0):
-        model.ringwidth = np.pi/6
+    def loose_ring_one_spot(lon3, amplon1, lat1, amplring, ringlat, i_mag, alpha0, width1, ringwidth2):
         return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.ring(i_mag, ringlat, model.ringwidth, alpha0, amplring)
+            model.spot(lat1, lon3, width1, amplon1),
+            model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring)
         )
     
     @model.register
-    def loose_ring_two_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, amplring, ringlat, i_mag, alpha0):
-        model.ringwidth = np.pi/6
+    def loose_ring_two_spots(lon1, lon2, amplon1, amplon2, lat1, lat2, amplring, 
+                             ringlat, i_mag, alpha0, ringwidth2, width1, width2):
         return model.combine(
-            model.spot(lat1, lon1, model.width1, amplon1),
-            model.spot(lat2, lon2, model.width1, amplon2),
-            model.ring(i_mag, ringlat, model.ringwidth, alpha0, amplring)
+            model.spot(lat1, lon1, width1, amplon1),
+            model.spot(lat2, lon2, width2, amplon2),
+            model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring)
         )
     
     @model.register
     def loose_ring_quiescent_background(amplring, ringlat, i_mag, alpha0, ringwidth2, amplback):
         model.ringwidth = np.pi
         return model.combine(model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring),
+                             model.equatorial_ring(amplback))
+    
+    @model.register
+    def loose_ring_quiescent_background_one_spot(amplring, ringlat, i_mag, alpha0, ringwidth2, amplback,
+                                                 lon3, amplon1, lat1, width1):
+        model.ringwidth = np.pi
+        return model.combine(model.ring(i_mag, ringlat, ringwidth2, alpha0, amplring),
+                            model.spot(lat1, lon3, width1, amplon1),
                              model.equatorial_ring(amplback))
     
     # @model.register
@@ -183,7 +191,7 @@ def register_lsr_models(model):
     names = ['Ring', #'Eq. ring + 1 Spot', 'Eq. ring + 2 Spots', '2 Spots',
              'Q. bkg. + 1 Spot', 'Q. bkg. + 2 Spots',
             'Ring + 1 Spot', "Ring + 2 Spots", #'2 Loose Spots',
-             'Q. bkg. + Ring']#, "Three Spots"]
+             'Q. bkg. + Ring', 'Q. bkg. + Ring + 1 Spot']#, "Three Spots"]
     return [ring_only, quiescent_background_one_spot, quiescent_background_two_spots,
              loose_ring_one_spot, loose_ring_two_spots,
-            loose_ring_quiescent_background], names
+            loose_ring_quiescent_background,loose_ring_quiescent_background_one_spot], names

@@ -5,9 +5,10 @@ from .geometry import create_spherical_grid, set_up_oblique_auroral_ring, rotate
 from .geometry_spot import get_one_spot
 import numpy as np
 import matplotlib.pyplot as plt
+import healpy as hp
 
 
-THETA, PHI = create_spherical_grid(int(10000))
+THETA, PHI = create_spherical_grid(int(3000))
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -156,6 +157,7 @@ class AuroralRing:
         flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
                                        self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
                                        foreshortening=foreshortening)
+        
         
         self.q = q
         return flux
@@ -322,28 +324,31 @@ class AuroralRing:
 
 
 
-    def plot_ring(self, ax, alpha, c="navy", c_irot="red", c_imag="yellow", ring_alpha=0.5, s=1):
+    def plot_ring(self, ax, alpha, c="navy", c_irot="peru", c_imag="maroon", ring_alpha=0.5, s=1):
 
         z_mag_alpha = rotate_around_arb_axis(alpha, self.z_rot_mag, self.z_rot)
 
         xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
 
         # plot z_rot
-        ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c_irot)
+        # ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c_irot)
 
         # THE RING ----------
         
 
         # plot the rotated blue points
         ax.scatter(xr, yr, zr, 
-                   cmap="cividis", c=self.amplitude[0,:], norm="linear", alpha=ring_alpha, s=s)
+                   c=c, norm="linear", alpha=ring_alpha, s=s)
 
+
+        # normalize z_mag_alpha to 1
+        z_mag_alpha = z_mag_alpha / np.linalg.norm(z_mag_alpha)    
 
         # plot z_rot_mag
         ax.plot([0, z_mag_alpha[0]], [0, z_mag_alpha[1]], [0, z_mag_alpha[2]], c=c_imag)
 
 
-    def plot_lat_lon_grid(self, ax=None, num_lat=6, num_lon=12, show_surface=False):
+    def plot_lat_lon_grid(self, ax=None, num_lat=6, num_lon=12, offset_lon=0):
         """
         Plot a latitude-longitude grid on a unit sphere (1-sphere).
         
@@ -355,8 +360,9 @@ class AuroralRing:
             Number of latitude lines (including equator, excluding poles)
         num_lon : int, default=12
             Number of longitude lines (meridians)
-        show_surface : bool, default=False
-            Whether to show the sphere surface with transparency
+        offset_lon : float, default=0
+            Offset for longitude lines in radians. For example, offset_lon=np.pi/6 will shift the longitude lines by 30 degrees 
+            for better visibility.
         
         Returns:
         --------
@@ -367,14 +373,13 @@ class AuroralRing:
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(111, projection='3d')
         
-        # Set equal aspect ratio for all axes
-        ax.set_box_aspect([1, 1, 1])
+     
         
         # Draw latitude lines (circles of constant latitude)
         # Latitude ranges from -90° to +90° (or -π/2 to π/2 in radians)
         latitudes = np.linspace(-np.pi/2, np.pi/2, num_lat + 2)[1:-1]  # Exclude poles
         
-        theta = np.linspace(0, 2*np.pi, 100)  # Azimuthal angle
+        theta = np.linspace(0, 2*np.pi, 100) +np.pi  # Azimuthal angle
         
         for lat in latitudes:
             # For a given latitude, radius of the circle is cos(lat)
@@ -384,8 +389,12 @@ class AuroralRing:
             x = r * np.cos(theta)
             y = r * np.sin(theta)
             z_line = np.full_like(theta, z)
+
+            mask = x > 0
+
+            x,y,z_line = x[mask], y[mask], z_line[mask]        
             
-            ax.plot(x, y, z_line, 'k-', alpha=0.6, linewidth=0.8)
+            ax.plot(x,y,z_line, 'k-', lw=0.8, alpha=1)
         
         # Draw equator (special case, thicker line)
         x_eq = np.cos(theta)
@@ -394,36 +403,20 @@ class AuroralRing:
         ax.plot(x_eq, y_eq, z_eq, 'k-', alpha=0.8, linewidth=1.)
         
         # Draw longitude lines (meridians from pole to pole)
-        longitudes = np.linspace(0, 2*np.pi, num_lon, endpoint=False)
+        longitudes = (np.linspace(0, 2*np.pi, num_lon+1, endpoint=False) + offset_lon) % (2*np.pi)  # Shift by 30° for better visibility
         
         phi = np.linspace(-np.pi/2, np.pi/2, 100)  # Polar angle from south to north pole
         
+        
         for lon in longitudes:
-            x = np.cos(phi) * np.cos(lon)
-            y = np.cos(phi) * np.sin(lon)
+            x = np.cos(phi) * np.sin(lon)
+            y = np.cos(phi) * np.cos(lon)
             z = np.sin(phi)
+
+            mask = x>0
+
             
-            ax.plot(x, y, z, 'k-', alpha=0.6, linewidth=0.8)
+            ax.plot(x[mask], y[mask], z[mask], 'k-', alpha=0.6, linewidth=0.8)
         
-        # Optionally draw the sphere surface
-        if show_surface:
-            u = np.linspace(0, 2 * np.pi, 50)
-            v = np.linspace(0, np.pi, 50)
-            x_surf = np.outer(np.cos(u), np.sin(v))
-            y_surf = np.outer(np.sin(u), np.sin(v))
-            z_surf = np.outer(np.ones(np.size(u)), np.cos(v))
-            
-            ax.plot_surface(x_surf, y_surf, z_surf, color='lightblue', 
-                        alpha=0.2, edgecolor='none')
-        
-        # Set labels and title
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        
-        # Set axis limits
-        ax.set_xlim([-1.2, 1.2])
-        ax.set_ylim([-1.2, 1.2])
-        ax.set_zlim([-1.2, 1.2])
         
         return ax

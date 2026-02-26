@@ -44,8 +44,6 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
     # rotate the ring
     xr = rotate_around_arb_axis_x_only(alpha, np.array([x, y, z]), z_rot)
 
-  
-
     # calculate the surface element velocities
     dxr = calculate_surface_element_velocities(alpha, dalpha, x, y, z, z_rot, omega, Rstar, xr)
 

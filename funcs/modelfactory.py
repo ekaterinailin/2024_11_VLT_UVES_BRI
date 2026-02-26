@@ -16,13 +16,14 @@ class SpectralModelFactory:
     """
     
     def __init__(self, vbins, vmids, broaden, i_rot, omega, 
-                 vmax, R_star, ddv, alphas, width1, ringwidth,
+                 vmax, R_star, ddv, alphas, width1, ringwidth, gamma_kms,
                  registry_file='model_registry.json', **kwargs):
         self.vbins = vbins
         self.vmids = vmids
         self.broaden = broaden
         self.width1 = width1
         self.ringwidth = ringwidth
+        self.gamma_kms = gamma_kms
 
         self.registry_file = Path(registry_file)
         
@@ -48,9 +49,9 @@ class SpectralModelFactory:
             'lon3': (0, 2*np.pi),
             'lon4': (0, 2*np.pi),
 
-            # width1 and width2 (0 to 45 degrees)
-            'width1': (0, np.pi/4),
-            'width2': (0, np.pi/4),
+            # width1 and width2 (5 to 25 degrees radius)
+            'width1': (0.1, 25 / 180 * np.pi),  # Avoid zero width
+            'width2': (0.1, 25 / 180 * np.pi),  # Avoid zero width
             
             # Latitude parameters (0 to 90 degrees)
             'lat1': (0, np.pi/2),
@@ -73,7 +74,7 @@ class SpectralModelFactory:
             # Ring-specific parameters
             'ringlat': (0, np.pi/2),
             'ringwidth': (0, np.pi/2),
-            'ringwidth2': (0, np.pi/2),
+            'ringwidth2': (0.1, np.pi/4),
             'i_mag': (0, np.pi/2),
             
             'alpha0': (0, 2*np.pi),
@@ -90,7 +91,7 @@ class SpectralModelFactory:
     def spot(self, lat, lon, width, ampl):
         """Create a spot spectrum."""
         return model_spot(
-            self.vbins, self.vmids, lat, lon, width, ampl, self.broaden,
+            self.vbins, self.vmids, lat, lon, width, ampl, self.broaden, self.gamma_kms,
             typ="spot", **self._common_kwargs
         )
     
@@ -98,7 +99,7 @@ class SpectralModelFactory:
         """Create a ring spectrum."""
         return model_ring(
             self.vbins, self.vmids, i_mag, phimax, dphi, alpha_0, 
-            self.broaden, ampl, typ="ring", **self._common_kwargs
+            self.broaden, ampl, self.gamma_kms, typ="ring", **self._common_kwargs
         )
     
     def equatorial_ring(self, amplback):
