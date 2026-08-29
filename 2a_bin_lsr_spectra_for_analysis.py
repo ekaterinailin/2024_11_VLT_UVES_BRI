@@ -23,6 +23,7 @@ df.columns = ['lambda'] + [float(x)%1 for x in df.columns[1:].values]
 # check that there are at least two spectra in each bin of width 0.05 in phase
 phases = np.array([float(x) for x in df.columns[1:].values])
 hist, bins = np.histogram(phases, bins=np.linspace(0, 1, NBINS+1))
+print("bins:", bins)
 binmids = (bins[:-1] + bins[1:]) / 2
 assert (hist >= 2).all(), "There are bins with less than 2 spectra!"
 
@@ -101,7 +102,7 @@ for i in range(len(bins)-1):
         plt.title(f'Phase {bins[i]:.2f}-{bins[i+1]:.2f}')
         plt.ylim(0.8, 4)
 plt.tight_layout()
-plt.show()
+plt.savefig('results_lsr/lsr_median_spectra_with_grey_overplot.png')
 
 # --------------------------------------------------------------------------------------
 

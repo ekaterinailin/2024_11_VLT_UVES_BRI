@@ -56,13 +56,16 @@ def fit_gp(x, maskedx, maskedy, maskedyerr):
 
     # Plot the initial prediction
     def plot_prediction(gp):
-        plt.errorbar(maskedx, maskedy, yerr=maskedyerr, fmt=".k", capsize=0, label="truth")
+        plt.errorbar(maskedx, maskedy, yerr=maskedyerr,fmt=".k", capsize=0, label="truth", markersize=1, alpha=0.2)
 
         if gp:
             mu, variance = gp.predict(maskedy, t=x, return_var=True)
             sigma = np.sqrt(variance)
-            plt.plot(x, mu, label="prediction")
+            plt.plot(x, mu, label="prediction", alpha=0.2)
             plt.fill_between(x, mu - sigma, mu + sigma, color="C0", alpha=0.2)
+            plt.xlim(x[0],x[-1])
+            plt.xlabel(r"Wavelength ($\AA$)")
+            plt.ylabel("Normalized flux")
 
             return mu, variance
 
@@ -251,6 +254,9 @@ if __name__ == "__main__":
 
     # GP fit the continuum
     mu, var = fit_gp(x, maskedx, maskedy, maskedyerr)
+    plt.errorbar(x[mask], y[mask],yerr=yerr[mask], color="navy",fmt="+",markersize=1, alpha=0.2)
+    plt.title("")
+    plt.savefig("figures/bri_gp_continuum.png", dpi=300)
 
     # SUBTRACT THE CONTINUUM ------------------------------------------------------
 

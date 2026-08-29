@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import healpy as hp
 
 
-THETA, PHI = create_spherical_grid(int(3000))
+
 
 class AuroralRing:
     """A class to represent an auroral ring on a star.
@@ -37,13 +37,17 @@ class AuroralRing:
         The maximum latitude of the ring in rad.
     v_mids : array
         The midpoints of the velocity bins.
+    THETA : array
+        The polar angles of the spherical grid in rad.
+    PHI : array
+        The azimuthal angles of the spherical grid in rad.
     """
 
     # init function takes the parameters of the ring and sets up the phi array
     def __init__(self, i_rot, v_bins, v_mids, omega, vmax, phi=None, 
                  i_mag=None, latitude=None, width=None, longitude=None,
                  latitude2 = None, longitude2 = None, width2 = None, Rstar=None, 
-                 amps=None, typ="ring"):
+                 amps=None, typ="ring", THETA=None, PHI=None):
         """Initialize the AuroralRing class.
 
         Parameters
@@ -318,13 +322,13 @@ class AuroralRing:
         
 
         # THE SPOT ----------
-        # use self.amplitude for color with viridis colormap
-        ax.scatter(xr, yr, zr,  cmap="viridis", c=c, 
-                                      norm="linear", alpha=ring_alpha, s=s)
+        # c is always a plain color (e.g. "navy"), never per-point amplitude
+        # data, so cmap/norm have nothing to map and matplotlib warns if given
+        ax.scatter(xr, yr, zr, c=c, alpha=ring_alpha, s=s)
 
 
 
-    def plot_ring(self, ax, alpha, c="navy", c_irot="peru", c_imag="maroon", ring_alpha=0.5, s=1):
+    def plot_ring(self, ax, alpha, c="navy", c_irot="peru", c_imag="maroon", ring_alpha=0.5, s=1, axis=True):
 
         z_mag_alpha = rotate_around_arb_axis(alpha, self.z_rot_mag, self.z_rot)
 
@@ -337,15 +341,16 @@ class AuroralRing:
         
 
         # plot the rotated blue points
-        ax.scatter(xr, yr, zr, 
-                   c=c, norm="linear", alpha=ring_alpha, s=s)
+        # (see plot_spot: c is a plain color, so norm has nothing to map)
+        ax.scatter(xr, yr, zr, c=c, alpha=ring_alpha, s=s)
 
 
         # normalize z_mag_alpha to 1
         z_mag_alpha = z_mag_alpha / np.linalg.norm(z_mag_alpha)    
 
         # plot z_rot_mag
-        ax.plot([0, z_mag_alpha[0]], [0, z_mag_alpha[1]], [0, z_mag_alpha[2]], c=c_imag)
+        if axis:
+            ax.plot([0, z_mag_alpha[0]], [0, z_mag_alpha[1]], [0, z_mag_alpha[2]], c=c_imag)
 
 
     def plot_lat_lon_grid(self, ax=None, num_lat=6, num_lon=12, offset_lon=0):

@@ -1,3 +1,6 @@
+from pyexpat import model
+
+from funcs.geometry import create_spherical_grid
 import numpy as np
 from funcs.fitting import model_spot, model_ring
 import inspect
@@ -17,15 +20,18 @@ class SpectralModelFactory:
     
     def __init__(self, vbins, vmids, broaden, i_rot, omega, 
                  vmax, R_star, ddv, alphas, width1, ringwidth, gamma_kms,
-                 registry_file='model_registry.json', **kwargs):
+                 registry_file='model_registry.json', gridsize=15000, **kwargs):
         self.vbins = vbins
         self.vmids = vmids
         self.broaden = broaden
         self.width1 = width1
         self.ringwidth = ringwidth
         self.gamma_kms = gamma_kms
+        self.gridsize = gridsize
 
         self.registry_file = Path(registry_file)
+
+        self.THETA, self.PHI = create_spherical_grid(self.gridsize)
         
         self._common_kwargs = {
             'i_rot': i_rot,
@@ -35,7 +41,9 @@ class SpectralModelFactory:
             'ddv': ddv,
             'alphas': alphas,
             'foreshortening': False,
-            'obj_only': False
+            'obj_only': False,
+            'THETA': self.THETA,
+            'PHI': self.PHI
         }
 
         # add any additional kwargs to common kwargs
@@ -48,16 +56,27 @@ class SpectralModelFactory:
             'lon2': (np.pi*3/4, 2*np.pi),
             'lon3': (0, 2*np.pi),
             'lon4': (0, 2*np.pi),
+            'lon5': (0, 2*np.pi),
+            'lon6': (0, 2*np.pi),
+            'lon7': (0, 2*np.pi),
 
             # width1 and width2 (5 to 25 degrees radius)
             'width1': (0.1, 25 / 180 * np.pi),  # Avoid zero width
             'width2': (0.1, 25 / 180 * np.pi),  # Avoid zero width
-            
+            'width3': (0.1, 25 / 180 * np.pi),  # Avoid zero width
+            'width4': (0.1, 25 / 180 * np.pi),  # Avoid zero width
+            'width5': (0.1, 25 / 180 * np.pi),  # Avoid zero width
+            "width6": (0.1, 25 / 180 * np.pi),  # Avoid zero width
+            'width7': (0.1, 25 / 180 * np.pi),  # Avoid zero width
+
             # Latitude parameters (0 to 90 degrees)
             'lat1': (0, np.pi/2),
             'lat2': (0, np.pi/2),
             'lat3': (0, np.pi/2),
             'lat4': (0, np.pi/2),
+            'lat5': (0, np.pi/2),
+            'lat6': (0, np.pi/2),
+            'lat7': (0, np.pi/2),
             'truelat': (0,np.pi),
             'truelat2': (0,np.pi),
             "trueringlat": (-np.pi/2,np.pi/2),
@@ -67,20 +86,27 @@ class SpectralModelFactory:
             'amplon2': (0,3),
             'amplon3': (0,3),
             'amplon4': (0,3),
+            'amplon5': (0,3),
+            'amplon6': (0,3),
+            'amplon7': (0,3),
             'amplring': (0,3),
             'amplring1': (0,3),
             'amplring2': (0,3),
             
             # Ring-specific parameters
             'ringlat': (0, np.pi/2),
+            'ringlat2': (0, np.pi/2),
             'ringwidth': (0, np.pi/2),
-            'ringwidth2': (0.1, np.pi/4),
+            'ringwidth1': (0.1, np.pi/4),#0.1
+            'ringwidth2': (0.1, np.pi/4),#0.1
             'i_mag': (0, np.pi/2),
             
             'alpha0': (0, 2*np.pi),
             'alpha_0': (0, 2*np.pi), 
-            'amplback': (0,3),
+            'amplback': (0.0,3),
         }
+
+        
 
         # Registry to store model functions by name
         self._model_registry = {}
@@ -94,13 +120,15 @@ class SpectralModelFactory:
             self.vbins, self.vmids, lat, lon, width, ampl, self.broaden, self.gamma_kms,
             typ="spot", **self._common_kwargs
         )
-    
     def ring(self, i_mag, phimax, dphi, alpha_0, ampl):
         """Create a ring spectrum."""
         return model_ring(
             self.vbins, self.vmids, i_mag, phimax, dphi, alpha_0, 
             self.broaden, ampl, self.gamma_kms, typ="ring", **self._common_kwargs
         )
+    
+    def background(self, amplback):
+        return self.ring(0, np.pi/2, np.pi, 0, amplback)
     
     def equatorial_ring(self, amplback):
         """Create a standard equatorial ring."""
@@ -504,7 +532,7 @@ class SpectralModelFactory:
             # Save updated registry
             self._save_registry()
             
-            print(f"Registered model: '{model_name}' with parameters {self._model_registry[model_name]['param_names']}")
+            # print(f"Registered model: '{model_name}' with parameters {self._model_registry[model_name]['param_names']}")
             
             return wrapper
         
@@ -538,8 +566,8 @@ class SpectralModelFactory:
                 with open(self.registry_file, 'r') as f:
                     registry_data = json.load(f)
                 
-                print(f"Loaded model registry from {self.registry_file}")
-                print(f"Available models: {list(registry_data['models'].keys())}")
+                # print(f"Loaded model registry from {self.registry_file}")
+                # print(f"Available models: {list(registry_data['models'].keys())}")
                 
                 # Note: We can't restore the actual functions from the registry file
                 # Functions must be re-registered by running the code that defines them
@@ -649,13 +677,16 @@ class SpectralModelFactory:
         yerr2 = data_err ** 2
         
         def log_likelihood(params):
+            
             try:
 
                 # get through param names and convert to sin(lat) or cos(ringlat) if needed
                 for i, name in enumerate(self.get_param_names(model_func)):
-                    if name == 'lat1' or name == 'lat2' or name == 'lat3' or name == 'lat4':
+                    if name == 'lat1' or name == 'lat2' or name == 'lat3' or name == 'lat4' or name == 'lat5':
                         params[i] = np.arcsin(params[i])
                     elif name == 'ringlat':
+                        params[i] = np.arccos(params[i])
+                    elif name == 'ringlat2':
                         params[i] = np.arccos(params[i])
                     elif name == "i_mag":   
                         params[i] = np.arcsin(params[i])
@@ -667,8 +698,7 @@ class SpectralModelFactory:
                         params[i] = np.arcsin(params[i]) + np.pi/2  # convert back to 0 to pi
                     elif name == 'truelat2':
                         params[i] = np.arcsin(params[i]) + np.pi/2  # convert back to 0 to pi
-                    elif name == "ringwidth":
-                        params[i] = params[i]  # sign flip to go to colatitude
+                    
                 model_spectra = model_func(*params)
                 logf = -0.5 * np.sum(np.log(2 * np.pi * yerr2))
                 loglike = -0.5 * np.sum((data - model_spectra) ** 2 / yerr2) + logf
@@ -703,6 +733,8 @@ class SpectralModelFactory:
             wrapped.append(is_wrapped)
         
         return wrapped
+
+
 
 
 

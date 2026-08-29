@@ -58,13 +58,16 @@ def fit_gp(x, maskedx, maskedy, maskedyerr):
 
     # Plot the initial prediction
     def plot_prediction(gp):
-        plt.errorbar(maskedx, maskedy, yerr=maskedyerr, fmt=".k", capsize=0, label="truth")
+        plt.errorbar(maskedx, maskedy, yerr=maskedyerr, fmt=".k", capsize=0, label="truth", markersize=1, alpha=0.2)
 
         if gp:
             mu, variance = gp.predict(maskedy, t=x, return_var=True)
             sigma = np.sqrt(variance)
-            plt.plot(x, mu, label="prediction")
+            plt.plot(x, mu, label="prediction",alpha=0.2)
             plt.fill_between(x, mu - sigma, mu + sigma, color="C0", alpha=0.2)
+            plt.xlim(x[0],x[-1])
+            plt.xlabel(r"Wavelength ($\AA$)")
+            plt.ylabel("Normalized flux")
 
             return mu, variance
 
@@ -103,11 +106,11 @@ if __name__ == "__main__":
     # load data
     files = glob.glob('spectra/spectra_lsr/spec1d_HI.*.fits')
 
-    data, error, wavs, timestamps = [], [], [], []
+    data, error, wavs, timestamps, mjd_times = [], [], [], [], []
     for file in files:
         hdu = fits.open(file)
         timestamps.append(((hdu[0].header["MJD"] - 57578) / PROT_LSR)  - 2.07)
-        
+        mjd_times.append(hdu[0].header["MJD"])
         wavs.append(hdu[8].data["OPT_WAVE"])
         data.append(hdu[8].data["OPT_COUNTS"])
         error.append(hdu[8].data["OPT_COUNTS_SIG"])
@@ -115,6 +118,7 @@ if __name__ == "__main__":
     wavs = np.array(wavs)
     data = np.array(data)
     error = np.array(error)
+    mjd_times = np.array(mjd_times) 
 
     # sort everything by timestamp
     timestamps = np.array(timestamps)
@@ -123,6 +127,7 @@ if __name__ == "__main__":
     wavs = wavs[sortidx]
     data = data[sortidx]
     error = error[sortidx]
+    mjd_times = mjd_times[sortidx]
 
     # take max and min of wavs[0] and wavs[1] as ranges for interpolation
     wmin = np.min(wavs.T[0])
@@ -219,8 +224,11 @@ if __name__ == "__main__":
     maskedx, maskedy, maskedyerr = x[~mask], y[~mask], yerr[~mask]
 
     # GP fit the continuum
-    plt.figure()
+    plt.figure(figsize=(6,4))
     mu, var = fit_gp(x, maskedx, maskedy, maskedyerr)
+    plt.errorbar(x[mask], y[mask],yerr=yerr[mask], color="navy",fmt="+",markersize=1, alpha=0.2)
+    plt.title("")
+    plt.savefig("figures/lsr_gp_continuum.png", dpi=300)
 
     # SUBTRACT THE CONTINUUM ------------------------------------------------------
 
@@ -316,6 +324,16 @@ if __name__ == "__main__":
 
     # write the results
     df.to_csv('results_lsr/lsr_norm_spectra.csv')
+
+    # write out lightcurve of the H alpha line by summing the flux in the H alpha line region
+    halphalc = df[(df.index > minhalpharange) & (df.index < maxhalpharange)].sum(axis=0)
+
+    halpha_lightcurve = pd.DataFrame({"time": mjd_times, "flux": halphalc.values})   
+
+    print(halpha_lightcurve.head())
+
+    # write the lightcurve to a csv file
+    halpha_lightcurve.to_csv('results_lsr/lsr_halpha_lightcurve.csv', index=False)
 
     # MAKE A SMOOTHED GREYSCALE PLOT ------------------------------------------------
 

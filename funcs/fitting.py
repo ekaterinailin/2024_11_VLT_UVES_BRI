@@ -12,22 +12,25 @@ Ekaterina Ilin, 2025, MIT License, ilin@astron.nl
 """
 import numpy as np 
 
-from scipy.ndimage import gaussian_filter1d
 from funcs.auroralring import AuroralRing
 from funcs.broadening import convolve_voigt_kms
 
 
 def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl, gamma_kms,
                alphas=None, foreshortening=False, i_rot=0, omega=0, vmax=0, 
-               R_star=0, ddv=0.1, obj_only=False, typ="ring"): 
+               R_star=0, ddv=0.1, obj_only=False, typ="ring", THETA=None, PHI=None): 
 
     # mid latitude of ring around magnetic axis in radians
-    mid_lat = phimax - dphi / 2
+    if phimax > 0:
+        mid_lat = phimax - dphi / 2
+    elif phimax < 0:
+        mid_lat = phimax + dphi / 2
 
     # define the auroral ring
     ring = AuroralRing(i_rot=i_rot, i_mag=imag, latitude=mid_lat,
                         width=dphi, Rstar=R_star,  
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, typ=typ)
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax, typ=typ,
+                    THETA=THETA, PHI=PHI)
 
     alphas_ = alphas + alpha_0 
 
@@ -37,14 +40,11 @@ def model_ring(vbins, vmids, imag, phimax, dphi, alpha_0,broaden, ampl, gamma_km
     if obj_only:
         return ring
     else:    
-        # wav = ring.v_mids / 2.9979246e5 * 6562.8 + 6562.8
-        # dv = broaden / ddv
-        # spectra = np.array([gaussian_filter1d(spectrum, dv) for spectrum in spectra])
-
         return convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl) 
 
 
 def convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl):
+        
         spectra = np.array([convolve_voigt_kms(vmids, spectrum, broaden, gamma_kms,
                        kernel_width_kms=None) for spectrum in spectra])
 
@@ -59,7 +59,7 @@ def convolve_and_normalize(vmids, spectra, broaden, gamma_kms, ampl):
 
 def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, gamma_kms,
                i_rot=0, omega=0, vmax=0, R_star=0, ddv=0.1,alphas=0,
-             foreshortening=True, obj_only=False, 
+             foreshortening=True, obj_only=False, THETA=None, PHI=None,
              typ="spot"): 
 
   
@@ -67,7 +67,8 @@ def model_spot(vbins, vmids, lat1, lon1, width1, ampl, broaden, gamma_kms,
     ring = AuroralRing(i_rot=i_rot, latitude=lat1,
                         width=width1, Rstar=R_star,  
                          longitude=lon1, 
-                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax,  typ=typ)
+                    v_bins=vbins, v_mids=vmids, omega=omega, vmax=vmax,  typ=typ,
+                    THETA=THETA, PHI=PHI)
 
 
     spectra = ring.get_spot_flux_numerically(alphas, normalize=False, foreshortening=foreshortening)

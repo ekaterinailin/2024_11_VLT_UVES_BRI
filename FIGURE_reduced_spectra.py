@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from funcs.lsr import PROT_LSR
 from funcs.bri import PROT_BRI
@@ -11,13 +12,15 @@ def plot_spectra(target):
         prot = PROT_LSR * 24 # hours
         title = "LSR J1835"
         hour_time = (spectra.columns.values.astype(float) * prot) 
-        spectra.columns = hour_time
     elif target == "bri":
         prot = PROT_BRI * 24  # hours
         title = "BRI 0021"
         time_list = spectra.columns.values
         hour_time = [float(t.split('_')[0]) + float(t.split('_')[1]) / 60 for t in time_list]
-        spectra.columns = hour_time
+        
+    # offset hour_time to start at zero for better visualization
+    hour_time = np.array(hour_time) - hour_time[-1]
+    spectra.columns = hour_time
 
     # plot the spectra in sequence
     plt.figure(figsize=(5, spectra.values.shape[1]*0.2 +2))
