@@ -7,7 +7,7 @@ from .geometry import rotate_around_arb_axis, calculate_surface_element_velociti
 
 
 def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude,
-                            dalpha=1e-8 * np.pi/180, normalize=True, foreshortening=False):
+                            dalpha=1e-8 * np.pi/180, foreshortening=False):
     """Calculate the broadened spectral line of the ring defined
     by x, y, z.
 
@@ -70,10 +70,5 @@ def numerical_spectral_line(alpha, x, y, z, z_rot, omega, Rstar, bins, amplitude
         flux = histogram(da, bins=[bins], dim=["velocity"], weights=weights)
     else:
         flux = np.zeros((weights.shape[0], len(bins)-1))
-
-    # normalize the flux
-    # throw error until i fix this
-    if normalize:
-        return ValueError("Normalization not yet implemented")
 
     return flux, amplitude, q, xr, dxr

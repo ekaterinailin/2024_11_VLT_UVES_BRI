@@ -132,69 +132,64 @@ class AuroralRing:
                                             normalize=normalize)
     
     # define a method to get the flux of the ring numerically
-    def get_flux_numerically(self, alpha, normalize=True, foreshortening=False,
-                            ):
+    def get_flux_numerically(self, alpha, foreshortening=False):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
         ----------
         alpha : array
             The rotational phase of the star in rad.
-        normalize : bool
-            Whether to normalize the flux.
         foreshortening : bool
             Whether to include geometric (Lambertian) foreshortening in the calculation.
         Returns
         -------
         flux : array
-            The flux of the ring at the given rotational phase.
+            The flux of the ring at the given rotational phase, un-normalized.
         """
         # get the x, y, z positions of the ring
-        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = set_up_oblique_auroral_ring(self.THETA, self.PHI, 
-                                                                            self.lat_max, self.lat_min, 
+        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = set_up_oblique_auroral_ring(self.THETA, self.PHI,
+                                                                            self.lat_max, self.lat_min,
                                                                             self.i_rot, self.i_mag)
-        
+
         self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
 
 
         # calculate the flux
         flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
-                                       self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
+                                       self.omega, self.Rstar, self.v_bins, self.amplitude,
                                        foreshortening=foreshortening)
-        
-        
+
+
         self.q = q
         return flux
-    
-    def get_spot_flux_numerically(self, alpha, normalize=True, foreshortening=False,):
+
+    def get_spot_flux_numerically(self, alpha, foreshortening=False):
         """Calculate the flux of the ring at a given rotational phase.
 
         Parameters
         ----------
         alpha : float
             The rotational phase of the star in rad.
-        normalize : bool
-            Whether to normalize the flux.
         foreshortening : bool
             Whether to include geometric (Lambertian) foreshortening in the calculation.
         Returns
         -------
         flux : array
-            The flux of the ring at the given rotational phase.
+            The flux of the ring at the given rotational phase, un-normalized.
         """
-        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_one_spot(self.THETA, self.PHI, 
+        (self.x, self.y, self.z), self.z_rot, self.z_rot_mag, self.amplitude = get_one_spot(self.THETA, self.PHI,
                                                                             self.latitude, self.longitude, self.width,
-                                                                            self.i_rot) 
-     
+                                                                            self.i_rot)
+
         self.amplitude = np.copy(np.broadcast_to(self.amplitude, (len(alpha),len(self.amplitude))))
-  
+
         # calculate the flux
         flux, weights, q, self.xr, self.dxr = numerical_spectral_line(alpha, self.x, self.y, self.z, self.z_rot,
-                                       self.omega, self.Rstar, self.v_bins, self.amplitude, normalize=normalize,
+                                       self.omega, self.Rstar, self.v_bins, self.amplitude,
                                        foreshortening=foreshortening)
-        
 
-        
+
+
         # self.amplitude = weights
         self.q = q
         return flux
@@ -222,41 +217,11 @@ class AuroralRing:
         
         # loop over all rotational phases and add up the flux
         for a in alpha:
-            full_flux_numerical += self.get_flux_numerically(a, normalize=False)
+            full_flux_numerical += self.get_flux_numerically(a)
 
         # normalize the flux and return
         return full_flux_numerical / np.max(full_flux_numerical)
         
-
-    def plot_sphere_with_auroral_ring(self, ax, alpha, c_ring="cyan",
-                                      c_sphere="grey", c_irot="red",
-                                      c_imag="yellow", sphere_alpha=0.1,
-                                      ring_alpha=0.5):
-
-        ax.scatter(np.sin(self.THETA)*np.cos(self.PHI),
-              np.sin(self.THETA)*np.sin(self.PHI),
-              np.cos(self.THETA), c="#00204C", alpha=sphere_alpha)
-
-        # plot the x axis as a dashed line
-        ax.plot([-1, 1], [0, 0], [0, 0], c='k', ls='--')
-
-        z_mag_alpha = rotate_around_arb_axis(alpha, self.z_rot_mag, self.z_rot)
-
-        xr, yr, zr = rotate_around_arb_axis(alpha, np.array([self.x, self.y, self.z]), self.z_rot)
-
-        # plot z_rot
-        ax.plot([0, 1.5 *self.z_rot[0]], [0, 1.5 *self.z_rot[1]], [0,1.5 * self.z_rot[2]], c=c_irot)
-
-        # THE RING ----------
-        
-
-        # plot the rotated blue points
-        ax.scatter(xr, yr, zr, 
-                   cmap="cividis", c=self.amplitude, norm="linear", alpha=ring_alpha)
-
-
-        # plot z_rot_mag
-        ax.plot([0, z_mag_alpha[0]], [0, z_mag_alpha[1]], [0, z_mag_alpha[2]], c=c_imag)
 
     def plot_layout_sphere(self, ax, view="observer front"):
         # set figure limits
@@ -280,19 +245,6 @@ class AuroralRing:
         # let axes disappear
         ax.set_axis_off()
 
-
-    def plot_setup_sphere(self):
-
-        fig = plt.figure(figsize=(8, 8))
-        spec = fig.add_gridspec(ncols=1, nrows=1)
-
-        ax = fig.add_subplot(spec[0, 0], projection='3d')
-        ax.set_axis_off()
-
-        ax.set_box_aspect([1,1,1])  # aspect ratio is 1:1:1
-
-        return fig, ax
-    
 
     def plot_sphere_only(self, ax, sphere_alpha=0.05, c="#00204C", s=1,
                        ):
