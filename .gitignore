@@ -6,6 +6,11 @@
 *pyc
 *png
 trash_i_cant_let_go_of/
+*.sh
+*.json
+*.csv
+*.tex
+
 spectra/
 results_lsr/
 results_bri/
