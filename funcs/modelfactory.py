@@ -526,7 +526,14 @@ class SpectralModelFactory:
                 'function': wrapper,
                 'param_names': self.get_param_names(f),
                 'docstring': f.__doc__,
-                'source': inspect.getsource(f) if inspect.getsource else None
+                'source': inspect.getsource(f) if inspect.getsource else None,
+                # The factory instance `f` actually runs against -- carries
+                # this model's real broaden/inclination (see .ring()/.spot()/
+                # .background(), and get_factory() below). Registering
+                # directly on `self` always means "this factory", but an
+                # aliased entry (see alias()) keeps whatever factory it was
+                # copied from, since that's the one its geometry is bound to.
+                'factory': self,
             }
             
             # Save updated registry
@@ -541,7 +548,37 @@ class SpectralModelFactory:
             return decorator
         else:
             return decorator(func)
-    
+
+    def alias(self, alias_name, target_name, source=None):
+        """
+        Register `alias_name` as an alternate lookup name for an already
+        registered model, without redefining or re-registering the
+        underlying function. Useful for legacy/historical names (e.g. old
+        results folders from before a naming scheme changed) that should
+        keep resolving to the model they always meant.
+
+        Parameters:
+        -----------
+        alias_name : str
+            The additional name to register.
+        target_name : str
+            Name of an already-registered model to alias to.
+        source : SpectralModelFactory, optional
+            Factory `target_name` is registered on (defaults to `self`).
+            Pass a different factory when the alias must actually run
+            under a different configuration than this one -- e.g. a
+            different broaden/inclination -- rather than merely sharing
+            this factory's own model of the same name.
+        """
+        source = self if source is None else source
+        if target_name not in source._model_registry:
+            raise ValueError(
+                f"Cannot alias '{alias_name}' to unknown model '{target_name}'. "
+                f"Register '{target_name}' first."
+            )
+        self._model_registry[alias_name] = source._model_registry[target_name]
+        self._save_registry()
+
     def _save_registry(self):
         """Save the model registry to file."""
         registry_data = {
@@ -596,7 +633,44 @@ class SpectralModelFactory:
                 f"Make sure to define and register the model before loading results."
             )
         return self._model_registry[name]['function']
-    
+
+    def is_registered(self, name):
+        """Whether `name` is already registered on this factory."""
+        return name in self._model_registry
+
+    def get_factory(self, name):
+        """
+        Return the factory instance `name`'s model actually runs against --
+        i.e. the one whose .ring()/.spot()/.background() carry its real
+        broaden/inclination.
+
+        For a model registered directly on this factory (the common case),
+        that's just `self`. For one registered elsewhere and copied in via
+        `alias()` -- e.g. a historical broaden/inclination variant (see
+        funcs.lsr.register_variants_from_results) -- it's the other factory
+        that variant was actually built on, which may run at a different
+        broaden/inclination than this one. Building spot/ring/background
+        components straight off `self` instead of this, for a model that
+        isn't one of this factory's own, silently ignores that model's
+        broaden/inclination.
+
+        Parameters:
+        -----------
+        name : str
+            Name of the registered model.
+
+        Returns:
+        --------
+        SpectralModelFactory
+        """
+        if name not in self._model_registry:
+            raise ValueError(
+                f"Model '{name}' not registered. "
+                f"Available models: {list(self._model_registry.keys())}\n"
+                f"Make sure to define and register the model before loading results."
+            )
+        return self._model_registry[name]['factory']
+
     def list_models(self):
         """List all registered models."""
         if not self._model_registry:
