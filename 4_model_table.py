@@ -643,7 +643,7 @@ def main():
     ap.add_argument("models", nargs="+",
                     help='modelname or modelname:"Display Label"')
     ap.add_argument("--results-dir", default=RESULTS_DIR)
-    ap.add_argument("--out", default="parameter_table.tex")
+    ap.add_argument("--out", default="paper/tables/parameter_table.tex")
     ap.add_argument("--orient", choices=["tall", "wide"], default="tall",
                     help="tall = parameters as rows (default, fits the page)")
     ap.add_argument("--center", choices=["median", "ml"], default="median")
@@ -821,6 +821,9 @@ def main():
     L.append(r"\end{table}")
     tex = "\n".join(L)
 
+    out_dir = os.path.dirname(args.out)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     with open(args.out, "w") as f:
         f.write(tex + "\n")
 

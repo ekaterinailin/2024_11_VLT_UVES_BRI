@@ -3,8 +3,7 @@
 Magnetospheric structure of LSR J1835 (and any similar rotator) as a function
 of emission latitude.
 
-Translates the April 2026 note by H. Vedantham into a calculator. For a given
-latitude on the star it returns:
+For a given latitude on the star it returns:
 
     L-shell            L = sec^2(lat), the equatorial crossing of the dipole
                        field line rooted at that latitude
@@ -18,34 +17,6 @@ latitude on the star it returns:
                        (required for co-rotation to be enforced out to L)
     H                  scale height of the centrifugally confined plasma disk
     v_drift            equatorial radial drift speed implied by Mdot and rho
-
-CALIBRATION
------------
-The note does not state the Pedersen conductance Sigma, but it does quote two
-Hill-Pontius results:
-
-    L_HP = 3.4  (Mdot/1e14 g/s)^-1/4 R*
-    L_HP = 33.8 (Mdot/1e10 g/s)^-1/4 R*
-
-Both imply the same prefactor A = L_HP * Mdot^(1/4) to 0.6%, so the script
-calibrates Sigma from them by default rather than requiring a value. Pass
---sigma to override.
-
-A KNOWN INCONSISTENCY IN THE SOURCE NOTE
-----------------------------------------
-Two statements imply different stellar radii:
-
-    v_corot(33 R*) = 0.0046 c        ->  R* = 0.098 Rsun
-    H = 4.71 (T/keV)^1/2 R*          ->  R* = 0.154 Rsun   [using H = sqrt(kT/m)/Omega]
-
-a factor 1.57 apart. The script computes H from first principles and reports
-BOTH its own value and the note's coefficient so the discrepancy is visible
-rather than silently inherited. The drift-velocity figure of 650 km/s is
-reproduced (692 km/s) with R* = 0.098 Rsun and a disk cross-section of
-2*pi*r*H, so that is the convention adopted here.
-
-Everything else in the note reproduces exactly: the L-shell table to three
-digits, and the two Hill-Pontius anchors to 0.6%.
 
 Usage
 -----
